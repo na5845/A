@@ -294,21 +294,29 @@
             transition: background-color 0.2s ease;
         }
         
-        .expandable-row td:first-child::before {
-            content: '▼ ';
+        .arrow-cell {
+            width: 25px;
+            text-align: center;
+            padding: 15px 5px;
+        }
+        
+        .arrow-icon {
             color: #3498db;
-            font-size: 0.9em;
-            margin-left: 8px;
+            font-size: 0.7em;
             transition: transform 0.3s ease;
             display: inline-block;
         }
         
-        .expandable-row.expanded td:first-child::before {
+        .expandable-row.expanded .arrow-icon {
             transform: rotate(180deg);
         }
         
         .expandable-row:hover {
             background: #e3f2fd !important;
+        }
+        
+        .non-expandable .arrow-cell {
+            background: transparent;
         }
         
         .detail-row {
@@ -516,6 +524,7 @@
                     <table>
                         <thead>
                             <tr>
+                                <th style="width: 25px;"></th>
                                 <th>סוג הוצאה</th>
                                 <th>סכום (₪)</th>
                                 <th>אחוז</th>
