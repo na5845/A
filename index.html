@@ -294,15 +294,16 @@
             transition: background-color 0.2s ease;
         }
         
-        .expandable-row::after {
-            content: ' ▼';
+        .expandable-row td:first-child::before {
+            content: '▼ ';
             color: #3498db;
-            font-size: 0.8em;
-            margin-right: 5px;
+            font-size: 0.9em;
+            margin-left: 8px;
             transition: transform 0.3s ease;
+            display: inline-block;
         }
         
-        .expandable-row.expanded::after {
+        .expandable-row.expanded td:first-child::before {
             transform: rotate(180deg);
         }
         
@@ -624,6 +625,7 @@
     <script>
         function toggleDetails(category) {
             const detailRows = document.querySelectorAll('[id^="' + category + '-"]');
+            const expandableRow = event.currentTarget;
             
             let isVisible = false;
             detailRows.forEach(row => {
@@ -637,11 +639,13 @@
                 detailRows.forEach(row => {
                     row.classList.remove('show');
                 });
+                expandableRow.classList.remove('expanded');
             } else {
                 // הצגת הפירוט
                 detailRows.forEach(row => {
                     row.classList.add('show');
                 });
+                expandableRow.classList.add('expanded');
             }
         }
     </script>
