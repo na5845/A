@@ -294,6 +294,18 @@
             transition: background-color 0.2s ease;
         }
         
+        .expandable-row::after {
+            content: ' ▼';
+            color: #3498db;
+            font-size: 0.8em;
+            margin-right: 5px;
+            transition: transform 0.3s ease;
+        }
+        
+        .expandable-row.expanded::after {
+            transform: rotate(180deg);
+        }
+        
         .expandable-row:hover {
             background: #e3f2fd !important;
         }
@@ -520,20 +532,17 @@
                                 <td>20,550</td>
                                 <td>14.0%</td>
                             </tr>
-                            <tr class="detail-row detail-header" id="salary-1">
-                                <td colspan="3">פירוט משכורות:</td>
-                            </tr>
-                            <tr class="detail-row" id="salary-2">
+                            <tr class="detail-row" id="salary-1">
                                 <td>אברהם פלק</td>
                                 <td>9,400</td>
                                 <td>45.7%</td>
                             </tr>
-                            <tr class="detail-row" id="salary-3">
+                            <tr class="detail-row" id="salary-2">
                                 <td>שלמה מאיר קליין</td>
                                 <td>9,400</td>
                                 <td>45.7%</td>
                             </tr>
-                            <tr class="detail-row" id="salary-4">
+                            <tr class="detail-row" id="salary-3">
                                 <td>נחמן אייזנבאך</td>
                                 <td>1,750</td>
                                 <td>8.5%</td>
@@ -550,15 +559,12 @@
                                 <td>3,000</td>
                                 <td>2.0%</td>
                             </tr>
-                            <tr class="detail-row detail-header" id="office-1">
-                                <td colspan="3">פירוט הוצאות משרד:</td>
-                            </tr>
-                            <tr class="detail-row" id="office-2">
+                            <tr class="detail-row" id="office-1">
                                 <td>שכירות</td>
                                 <td>2,550</td>
                                 <td>85.0%</td>
                             </tr>
-                            <tr class="detail-row" id="office-3">
+                            <tr class="detail-row" id="office-2">
                                 <td>חשמל-מים-ועד</td>
                                 <td>450</td>
                                 <td>15.0%</td>
@@ -569,10 +575,7 @@
                                 <td>3,500</td>
                                 <td>2.4%</td>
                             </tr>
-                            <tr class="detail-row detail-header" id="advertising-1">
-                                <td colspan="3">פירוט הוצאות פרסום:</td>
-                            </tr>
-                            <tr class="detail-row" id="advertising-2">
+                            <tr class="detail-row" id="advertising-1">
                                 <td>שקיות ממותגות</td>
                                 <td>3,500</td>
                                 <td>100%</td>
@@ -587,15 +590,12 @@
                                 <td>1,729</td>
                                 <td>1.2%</td>
                             </tr>
-                            <tr class="detail-row detail-header" id="software-1">
-                                <td colspan="3">פירוט תוכנות:</td>
-                            </tr>
-                            <tr class="detail-row" id="software-2">
+                            <tr class="detail-row" id="software-1">
                                 <td>סדרים</td>
                                 <td>1,333</td>
                                 <td>77.1%</td>
                             </tr>
-                            <tr class="detail-row" id="software-3">
+                            <tr class="detail-row" id="software-2">
                                 <td>מטרה הפקות חיוב</td>
                                 <td>396</td>
                                 <td>22.9%</td>
