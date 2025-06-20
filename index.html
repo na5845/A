@@ -290,33 +290,11 @@
         /* פונקציונליות פירוט */
         .expandable-row {
             cursor: pointer;
-            position: relative;
             transition: background-color 0.2s ease;
-        }
-        
-        .arrow-cell {
-            width: 25px;
-            text-align: center;
-            padding: 15px 5px;
-        }
-        
-        .arrow-icon {
-            color: #3498db;
-            font-size: 0.7em;
-            transition: transform 0.3s ease;
-            display: inline-block;
-        }
-        
-        .expandable-row.expanded .arrow-icon {
-            transform: rotate(180deg);
         }
         
         .expandable-row:hover {
             background: #e3f2fd !important;
-        }
-        
-        .non-expandable .arrow-cell {
-            background: transparent;
         }
         
         .detail-row {
@@ -335,10 +313,11 @@
             border-bottom: 1px dashed #ddd;
         }
         
-        .detail-header {
-            background: #e3f2fd !important;
+        .arrow-col {
+            width: 30px;
+            text-align: center;
+            color: #3498db;
             font-weight: bold;
-            color: #2c3e50;
         }
         
         @media (max-width: 768px) {
@@ -524,10 +503,10 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 25px;"></th>
                                 <th>סוג הוצאה</th>
                                 <th>סכום (₪)</th>
                                 <th>אחוז</th>
+                                <th class="arrow-col"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -535,90 +514,111 @@
                                 <td>סך המלגות</td>
                                 <td>105,091</td>
                                 <td>71.8%</td>
+                                <td></td>
                             </tr>
                             
                             <tr class="expandable-row" onclick="toggleDetails('salary')">
                                 <td>משכורות</td>
                                 <td>20,550</td>
                                 <td>14.0%</td>
+                                <td class="arrow-col">▼</td>
                             </tr>
                             <tr class="detail-row" id="salary-1">
-                                <td>אברהם פלק</td>
+                                <td>&nbsp;&nbsp;&nbsp;אברהם פלק</td>
                                 <td>9,400</td>
                                 <td>45.7%</td>
+                                <td></td>
                             </tr>
                             <tr class="detail-row" id="salary-2">
-                                <td>שלמה מאיר קליין</td>
+                                <td>&nbsp;&nbsp;&nbsp;שלמה מאיר קליין</td>
                                 <td>9,400</td>
                                 <td>45.7%</td>
+                                <td></td>
                             </tr>
                             <tr class="detail-row" id="salary-3">
-                                <td>נחמן אייזנבאך</td>
+                                <td>&nbsp;&nbsp;&nbsp;נחמן אייזנבאך</td>
                                 <td>1,750</td>
                                 <td>8.5%</td>
+                                <td></td>
                             </tr>
                             
                             <tr>
                                 <td>חוב לפולק</td>
                                 <td>11,100</td>
                                 <td>7.6%</td>
+                                <td></td>
                             </tr>
                             
                             <tr class="expandable-row" onclick="toggleDetails('office')">
                                 <td>הוצאות משרד</td>
                                 <td>3,000</td>
                                 <td>2.0%</td>
+                                <td class="arrow-col">▼</td>
                             </tr>
                             <tr class="detail-row" id="office-1">
-                                <td>שכירות</td>
+                                <td>&nbsp;&nbsp;&nbsp;שכירות</td>
                                 <td>2,550</td>
                                 <td>85.0%</td>
+                                <td></td>
                             </tr>
                             <tr class="detail-row" id="office-2">
-                                <td>חשמל-מים-ועד</td>
+                                <td>&nbsp;&nbsp;&nbsp;חשמל-מים-ועד</td>
                                 <td>450</td>
                                 <td>15.0%</td>
+                                <td></td>
                             </tr>
                             
                             <tr class="expandable-row" onclick="toggleDetails('advertising')">
                                 <td>הוצאות פרסום</td>
                                 <td>3,500</td>
                                 <td>2.4%</td>
+                                <td class="arrow-col">▼</td>
                             </tr>
                             <tr class="detail-row" id="advertising-1">
-                                <td>שקיות ממותגות</td>
+                                <td>&nbsp;&nbsp;&nbsp;שקיות ממותגות</td>
                                 <td>3,500</td>
                                 <td>100%</td>
+                                <td></td>
                             </tr>
+                            
                             <tr>
                                 <td>חוב פסח</td>
                                 <td>3,500</td>
                                 <td>2.4%</td>
+                                <td></td>
                             </tr>
+                            
                             <tr class="expandable-row" onclick="toggleDetails('software')">
                                 <td>תוכנות</td>
                                 <td>1,729</td>
                                 <td>1.2%</td>
+                                <td class="arrow-col">▼</td>
                             </tr>
                             <tr class="detail-row" id="software-1">
-                                <td>סדרים</td>
+                                <td>&nbsp;&nbsp;&nbsp;סדרים</td>
                                 <td>1,333</td>
                                 <td>77.1%</td>
+                                <td></td>
                             </tr>
                             <tr class="detail-row" id="software-2">
-                                <td>מטרה הפקות חיוב</td>
+                                <td>&nbsp;&nbsp;&nbsp;מטרה הפקות חיוב</td>
                                 <td>396</td>
                                 <td>22.9%</td>
+                                <td></td>
                             </tr>
+                            
                             <tr>
                                 <td>עמלות</td>
                                 <td>563</td>
                                 <td>0.4%</td>
+                                <td></td>
                             </tr>
+                            
                             <tr class="total-row">
                                 <td>סך הכל</td>
                                 <td>146,304</td>
                                 <td>100%</td>
+                                <td></td>
                             </tr>
                         </tbody>
                     </table>
@@ -635,6 +635,7 @@
         function toggleDetails(category) {
             const detailRows = document.querySelectorAll('[id^="' + category + '-"]');
             const expandableRow = event.currentTarget;
+            const arrow = expandableRow.querySelector('.arrow-col');
             
             let isVisible = false;
             detailRows.forEach(row => {
@@ -648,13 +649,13 @@
                 detailRows.forEach(row => {
                     row.classList.remove('show');
                 });
-                expandableRow.classList.remove('expanded');
+                arrow.textContent = '▼';
             } else {
                 // הצגת הפירוט
                 detailRows.forEach(row => {
                     row.classList.add('show');
                 });
-                expandableRow.classList.add('expanded');
+                arrow.textContent = '▲';
             }
         }
     </script>
