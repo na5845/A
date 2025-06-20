@@ -316,8 +316,9 @@
         .arrow-col {
             width: 30px;
             text-align: center;
-            color: #3498db;
-            font-weight: bold;
+            color: #6c757d;
+            font-weight: normal;
+            font-size: 0.8em;
         }
         
         @media (max-width: 768px) {
@@ -521,7 +522,7 @@
                                 <td>משכורות</td>
                                 <td>20,550</td>
                                 <td>14.0%</td>
-                                <td class="arrow-col">▼</td>
+                                <td class="arrow-col">▶</td>
                             </tr>
                             <tr class="detail-row" id="salary-1">
                                 <td>&nbsp;&nbsp;&nbsp;אברהם פלק</td>
@@ -553,7 +554,7 @@
                                 <td>הוצאות משרד</td>
                                 <td>3,000</td>
                                 <td>2.0%</td>
-                                <td class="arrow-col">▼</td>
+                                <td class="arrow-col">▶</td>
                             </tr>
                             <tr class="detail-row" id="office-1">
                                 <td>&nbsp;&nbsp;&nbsp;שכירות</td>
@@ -572,7 +573,7 @@
                                 <td>הוצאות פרסום</td>
                                 <td>3,500</td>
                                 <td>2.4%</td>
-                                <td class="arrow-col">▼</td>
+                                <td class="arrow-col">▶</td>
                             </tr>
                             <tr class="detail-row" id="advertising-1">
                                 <td>&nbsp;&nbsp;&nbsp;שקיות ממותגות</td>
@@ -592,7 +593,7 @@
                                 <td>תוכנות</td>
                                 <td>1,729</td>
                                 <td>1.2%</td>
-                                <td class="arrow-col">▼</td>
+                                <td class="arrow-col">▶</td>
                             </tr>
                             <tr class="detail-row" id="software-1">
                                 <td>&nbsp;&nbsp;&nbsp;סדרים</td>
@@ -649,13 +650,13 @@
                 detailRows.forEach(row => {
                     row.classList.remove('show');
                 });
-                arrow.textContent = '▼';
+                arrow.textContent = '▶';
             } else {
                 // הצגת הפירוט
                 detailRows.forEach(row => {
                     row.classList.add('show');
                 });
-                arrow.textContent = '▲';
+                arrow.textContent = '▼';
             }
         }
     </script>
