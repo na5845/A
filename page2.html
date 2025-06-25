@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>פירוט פאגי ומרכנתיל - חודש מאי</title>
+    <title>דוח הכנסות והוצאות - חודש מאי</title>
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
@@ -27,6 +27,34 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
+        }
+        
+        .back-button {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+        
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        .back-arrow {
+            font-size: 1.2em;
         }
         
         .header h1 {
@@ -43,6 +71,48 @@
         
         .content {
             padding: 40px;
+        }
+        
+        .charts-section {
+            margin-bottom: 50px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+        }
+        
+        .charts-title {
+            text-align: center;
+            font-size: 1.8em;
+            color: #495057;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #dee2e6;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-wrapper {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .chart-title {
+            font-size: 1.3em;
+            color: #495057;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .chart-canvas {
+            margin: 0 auto;
         }
         
         .section {
@@ -241,12 +311,17 @@
         }
         
         @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
             .tables-container {
                 grid-template-columns: 1fr;
             }
             
             .content {
                 padding: 20px;
+                
             }
             
             .header {
@@ -256,17 +331,56 @@
             .header h1 {
                 font-size: 2em;
             }
+            
+            .back-button {
+                left: 15px;
+                padding: 8px 15px;
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>פירוט בנק פאגי ובנק מרכנתיל</h1>
+            <a href="https://na5845.github.io/A/" class="back-button">
+                <span class="back-arrow">←</span>
+                לדף הקודם
+            </a>
+            <h1>דוח הכנסות והוצאות</h1>
             <div class="period">חודש מאי 2025</div>
         </div>
         
         <div class="content">
+            <!-- גרפים -->
+            <div class="charts-section">
+                <h2 class="charts-title">תצוגה גרפית של הנתונים</h2>
+                
+                <div class="charts-container">
+                    <div class="chart-wrapper">
+                        <h3 class="chart-title">התפלגות הכנסות לפי בנקים</h3>
+                        <canvas id="incomeChart" class="chart-canvas" width="300" height="300"></canvas>
+                    </div>
+                    
+                    <div class="chart-wrapper">
+                        <h3 class="chart-title">התפלגות הוצאות לפי בנקים</h3>
+                        <canvas id="expensesChart" class="chart-canvas" width="300" height="300"></canvas>
+                    </div>
+                </div>
+                
+                <div class="charts-container">
+                    <div class="chart-wrapper">
+                        <h3 class="chart-title">הוצאות קרן התורה (פאגי)</h3>
+                        <canvas id="pagiTorahChart" class="chart-canvas" width="300" height="300"></canvas>
+                    </div>
+                    
+                    <div class="chart-wrapper">
+                        <h3 class="chart-title">הוצאות בית המדרש (פאגי)</h3>
+                        <canvas id="pagiBeitChart" class="chart-canvas" width="300" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            
             <!-- פאגי -->
             <div class="section">
                 <div class="section-divider">
@@ -557,8 +671,102 @@
         </div>
         
         <div class="footer">
-            <p>פירוט מפורט לדוח פאגי ומרכנתיל • תאריך עדכון: יוני 2025</p>
+            <p>דוח זה נוצר עבור ההנהלה • תאריך עדכון: יוני 2025</p>
         </div>
     </div>
-</body>
-</html>
+
+    <script>
+        // פונקציה ליצירת גרף עוגה
+        function createPieChart(canvasId, data, colors) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 100;
+            
+            // חישוב סך הכל
+            const total = data.reduce((sum, item) => sum + item.value, 0);
+            
+            let currentAngle = -Math.PI / 2; // התחלה מלמעלה
+            
+            // ציור הגרף
+            data.forEach((item, index) => {
+                const sliceAngle = (item.value / total) * 2 * Math.PI;
+                
+                // ציור הפרוסה
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                ctx.closePath();
+                ctx.fillStyle = colors[index];
+                ctx.fill();
+                
+                // ציור קו לבן בין הפרוסות
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(
+                    centerX + Math.cos(currentAngle) * radius,
+                    centerY + Math.sin(currentAngle) * radius
+                );
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                currentAngle += sliceAngle;
+            });
+            
+            // ציור הקו האחרון
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(
+                centerX + Math.cos(currentAngle) * radius,
+                centerY + Math.sin(currentAngle) * radius
+            );
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // הוספת אגדה
+            let legendY = canvas.height + 20;
+            data.forEach((item, index) => {
+                const percentage = ((item.value / total) * 100).toFixed(1);
+                
+                // צבע
+                ctx.fillStyle = colors[index];
+                ctx.fillRect(10, legendY, 15, 15);
+                
+                // טקסט
+                ctx.fillStyle = '#333';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${item.label}: ₪${item.value.toLocaleString()} (${percentage}%)`, canvas.width - 10, legendY + 12);
+                
+                legendY += 25;
+            });
+        }
+        
+        // נתונים לגרפים
+        const incomeData = [
+            { label: 'בנק פאגי', value: 93371 },
+            { label: 'בנק מרכנתיל', value: 40716 }
+        ];
+        
+        const expensesData = [
+            { label: 'בנק פאגי', value: 157286 },
+            { label: 'בנק מרכנתיל', value: 43420 }
+        ];
+        
+        const pagiTorahExpensesData = [
+            { label: 'מלגות', value: 107536 },
+            { label: 'משכורות', value: 8750 },
+            { label: 'חוב פולק', value: 10700 },
+            { label: 'הוצאות משרד', value: 3000 },
+            { label: 'עמלות', value: 264 }
+        ];
+        
+        const pagiBeitExpensesData = [
+            { label: 'הלואה', value: 18772 },
+            { label: 'לוי רהיטים', value: 3000 },
+            { label: 'חוב פולק דלתות', value: 2500 },
+            { label: 'בילקעס', value: 2000 },
+            { label: 'חו
