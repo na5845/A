@@ -49,23 +49,34 @@
             margin-bottom: 50px;
         }
         
-        .section-title {
-            background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
-            color: white;
-            padding: 20px 30px;
-            border-radius: 15px;
-            font-size: 1.8em;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        .section-divider {
+            display: flex;
+            align-items: center;
+            margin: 40px 0;
+            gap: 20px;
         }
         
-        .pagi-section {
+        .divider-line {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, #e9ecef, #6c757d, #e9ecef);
+        }
+        
+        .divider-text {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+            color: white;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1.1em;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .pagi-divider {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         }
         
-        .merkantil-section {
+        .merkantil-divider {
             background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
         }
         
@@ -251,153 +262,237 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>פירוט פאגי ומרכנתיל</h1>
+            <h1>פירוט בנק פאגי ובנק מרכנתיל</h1>
             <div class="period">חודש מאי 2025</div>
         </div>
         
         <div class="content">
             <!-- פאגי -->
             <div class="section">
-                <div class="section-title pagi-section">פאגי</div>
+                <div class="section-divider">
+                    <div class="divider-line"></div>
+                    <div class="divider-text pagi-divider">בנק פאגי</div>
+                    <div class="divider-line"></div>
+                </div>
                 
                 <!-- סיכום פאגי -->
                 <div class="summary-cards">
                     <div class="summary-card pagi-income">
-                        <h4>סך הכנסות פאגי</h4>
+                        <h4>סך הכנסות בנק פאגי</h4>
                         <div class="amount">₪93,371</div>
                     </div>
                     <div class="summary-card pagi-expenses">
-                        <h4>סך הוצאות פאגי</h4>
-                        <div class="amount">₪159,308</div>
+                        <h4>סך הוצאות בנק פאגי</h4>
+                        <div class="amount">₪157,286</div>
                     </div>
                 </div>
                 
-                <div class="tables-container">
-                    <div class="table-section income-section">
-                        <h3>הכנסות פאגי</h3>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>מקור הכנסה</th>
-                                    <th>סכום (₪)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="category-row">
-                                    <td colspan="2">אשראי והו"ק</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>קרן התורה</td>
-                                    <td>72,630</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>בית המדרש</td>
-                                    <td>17,921</td>
-                                </tr>
-                                <tr class="divider">
-                                    <td colspan="2"></td>
-                                </tr>
-                                <tr class="category-row">
-                                    <td colspan="2">העברות</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>קרן התורה</td>
-                                    <td>2,820</td>
-                                </tr>
-                                <tr class="total-row">
-                                    <td>סך הכל</td>
-                                    <td>93,371</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <!-- פירוט לפי מטרות -->
+                <div class="section">
+                    <h2 style="color: #495057; margin-bottom: 30px; font-size: 1.4em; text-align: center; border-bottom: 2px solid #dee2e6; padding-bottom: 10px;">פירוט לפי מטרות</h2>
+                    
+                    <!-- קרן התורה -->
+                    <div style="margin-bottom: 40px;">
+                        <h3 style="background: linear-gradient(135deg, #17a2b8, #20c997); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 20px; text-align: center;">קרן התורה</h3>
+                        
+                        <div class="summary-cards">
+                            <div class="summary-card">
+                                <h4>הכנסות קרן התורה</h4>
+                                <div class="amount" style="color: #28a745;">₪75,450</div>
+                                <div style="font-size: 0.9em; color: #666;">אשראי והו"ק + העברות</div>
+                            </div>
+                            <div class="summary-card">
+                                <h4>הוצאות קרן התורה</h4>
+                                <div class="amount" style="color: #dc3545;">₪130,250</div>
+                                <div style="font-size: 0.9em; color: #666;">מלגות + משכורות + הוצאות</div>
+                            </div>
+                            <div class="summary-card">
+                                <h4>יתרה קרן התורה</h4>
+                                <div class="amount" style="color: #dc3545;">-₪54,800</div>
+                                <div style="font-size: 0.9em; color: #666;">גירעון</div>
+                            </div>
+                        </div>
+                        
+                        <div class="tables-container">
+                            <div class="table-section income-section">
+                                <h3>הכנסות קרן התורה</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>מקור הכנסה</th>
+                                            <th>סכום (₪)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="subcategory-row">
+                                            <td>אשראי והו"ק</td>
+                                            <td>72,630</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>העברות</td>
+                                            <td>2,820</td>
+                                        </tr>
+                                        <tr class="total-row">
+                                            <td>סך הכל</td>
+                                            <td>75,450</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="table-section expenses-section">
+                                <h3>הוצאות קרן התורה</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>סוג הוצאה</th>
+                                            <th>סכום (₪)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="subcategory-row">
+                                            <td>מלגות</td>
+                                            <td>107,536</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>משכורות</td>
+                                            <td>8,750</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>הוצאות משרד</td>
+                                            <td>3,000</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>עמלות</td>
+                                            <td>264</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>חוב פולק</td>
+                                            <td>10,700</td>
+                                        </tr>
+                                        <tr class="total-row">
+                                            <td>סך הכל</td>
+                                            <td>130,250</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="table-section expenses-section">
-                        <h3>הוצאות פאגי</h3>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>סוג הוצאה</th>
-                                    <th>סכום (₪)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="category-row">
-                                    <td colspan="2">קרן התורה</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>מלגות</td>
-                                    <td>107,536</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>משכורות</td>
-                                    <td>8,750</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>הוצאות משרד</td>
-                                    <td>3,000</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>עמלות</td>
-                                    <td>264</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>חוב פולק</td>
-                                    <td>10,700</td>
-                                </tr>
-                                <tr class="divider">
-                                    <td colspan="2"></td>
-                                </tr>
-                                <tr class="category-row">
-                                    <td colspan="2">בית המדרש</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>לוי רהיטים</td>
-                                    <td>3,000</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>בילקעס</td>
-                                    <td>2,000</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>הלואה</td>
-                                    <td>18,772</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>עמלות</td>
-                                    <td>264</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>חוב פולק דלתות</td>
-                                    <td>2,500</td>
-                                </tr>
-                                <tr class="subcategory-row">
-                                    <td>חוב פולק בימה</td>
-                                    <td>500</td>
-                                </tr>
-                                <tr class="total-row">
-                                    <td>סך הכל</td>
-                                    <td>157,286</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- בית המדרש -->
+                    <div style="margin-bottom: 40px;">
+                        <h3 style="background: linear-gradient(135deg, #6f42c1, #e83e8c); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 20px; text-align: center;">בית המדרש</h3>
+                        
+                        <div class="summary-cards">
+                            <div class="summary-card">
+                                <h4>הכנסות בית המדרש</h4>
+                                <div class="amount" style="color: #28a745;">₪17,921</div>
+                                <div style="font-size: 0.9em; color: #666;">אשראי והו"ק</div>
+                            </div>
+                            <div class="summary-card">
+                                <h4>הוצאות בית המדרש</h4>
+                                <div class="amount" style="color: #dc3545;">₪27,036</div>
+                                <div style="font-size: 0.9em; color: #666;">רהיטים + הלואות + הוצאות</div>
+                            </div>
+                            <div class="summary-card">
+                                <h4>יתרה בית המדרש</h4>
+                                <div class="amount" style="color: #dc3545;">-₪9,115</div>
+                                <div style="font-size: 0.9em; color: #666;">גירעון</div>
+                            </div>
+                        </div>
+                        
+                        <div class="tables-container">
+                            <div class="table-section income-section">
+                                <h3>הכנסות בית המדרש</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>מקור הכנסה</th>
+                                            <th>סכום (₪)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="subcategory-row">
+                                            <td>אשראי והו"ק</td>
+                                            <td>17,921</td>
+                                        </tr>
+                                        <tr class="total-row">
+                                            <td>סך הכל</td>
+                                            <td>17,921</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="table-section expenses-section">
+                                <h3>הוצאות בית המדרש</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>סוג הוצאה</th>
+                                            <th>סכום (₪)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="subcategory-row">
+                                            <td>לוי רהיטים</td>
+                                            <td>3,000</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>בילקעס</td>
+                                            <td>2,000</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>הלואה</td>
+                                            <td>18,772</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>עמלות</td>
+                                            <td>264</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>חוב פולק דלתות</td>
+                                            <td>2,500</td>
+                                        </tr>
+                                        <tr class="subcategory-row">
+                                            <td>חוב פולק בימה</td>
+                                            <td>500</td>
+                                        </tr>
+                                        <tr class="total-row">
+                                            <td>סך הכל</td>
+                                            <td>27,036</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             
             <!-- מרכנתיל -->
             <div class="section">
-                <div class="section-title merkantil-section">מרכנתיל</div>
+                <div class="section-divider">
+                    <div class="divider-line"></div>
+                    <div class="divider-text merkantil-divider">בנק מרכנתיל</div>
+                    <div class="divider-line"></div>
+                </div>
                 
                 <!-- סיכום מרכנתיל -->
                 <div class="summary-cards">
                     <div class="summary-card merkantil-income">
-                        <h4>סך הכנסות מרכנתיל</h4>
+                        <h4>סך הכנסות בנק מרכנתיל</h4>
                         <div class="amount">₪40,716</div>
                     </div>
                     <div class="summary-card merkantil-expenses">
-                        <h4>סך הוצאות מרכנתיל</h4>
+                        <h4>סך הוצאות בנק מרכנתיל</h4>
                         <div class="amount">₪43,420</div>
+                    </div>
+                    <div class="summary-card">
+                        <h4>יתרה בנק מרכנתיל</h4>
+                        <div class="amount" style="color: #dc3545;">-₪2,704</div>
+                        <div style="font-size: 0.9em; color: #666;">גירעון</div>
                     </div>
                 </div>
                 
