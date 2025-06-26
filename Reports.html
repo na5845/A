@@ -272,36 +272,7 @@
             margin-top: 50px;
         }
 
-        .floating-stats {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(15px);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            min-width: 200px;
-        }
 
-        .floating-stats h4 {
-            color: #495057;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .quick-stat {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            padding: 5px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .quick-stat:last-child {
-            border-bottom: none;
-        }
 
         @media (max-width: 768px) {
             .container {
@@ -319,11 +290,6 @@
             .reports-grid {
                 grid-template-columns: 1fr;
                 gap: 20px;
-            }
-
-            .floating-stats {
-                position: relative;
-                margin-bottom: 20px;
             }
 
             .year-tabs {
@@ -367,22 +333,7 @@
 </head>
 <body>
     <div class="container">
-        <!-- נתונים צפים -->
-        <div class="floating-stats">
-            <h4>סטטיסטיקות כלליות</h4>
-            <div class="quick-stat">
-                <span>דוחות זמינים:</span>
-                <strong id="available-count">0</strong>
-            </div>
-            <div class="quick-stat">
-                <span>בהכנה:</span>
-                <strong id="upcoming-count">0</strong>
-            </div>
-            <div class="quick-stat">
-                <span>שנה נוכחית:</span>
-                <strong id="current-year">2025</strong>
-            </div>
-        </div>
+
 
         <!-- כותרת ראשית -->
         <div class="header">
@@ -482,8 +433,7 @@
                         </div>
                     </div>
                     <div class="action-buttons">
-                        <a href="#" class="btn btn-primary">צפייה בדוח</a>
-                        <a href="#" class="btn btn-secondary">פירוט בנקים</a>
+                        <a href="https://na5845.github.io/A/" class="btn btn-primary">צפייה בדוח</a>
                     </div>
                 </div>
 
@@ -644,25 +594,8 @@
                         reports.classList.add('hidden');
                     }
                 });
-                
-                // עדכון נתונים צפים
-                updateFloatingStats(selectedYear);
             });
         });
-
-        // עדכון סטטיסטיקות צפות
-        function updateFloatingStats(year) {
-            const currentReports = document.querySelector(`[data-year="${year}"]`);
-            const availableReports = currentReports.querySelectorAll('.report-card.available').length;
-            const upcomingReports = currentReports.querySelectorAll('.status-upcoming').length;
-            
-            document.getElementById('available-count').textContent = availableReports;
-            document.getElementById('upcoming-count').textContent = upcomingReports;
-            document.getElementById('current-year').textContent = year;
-        }
-
-        // אתחול התקציבים הצפים
-        updateFloatingStats('2025');
 
         // אפקט hover מתקדם לכרטיסים
         document.querySelectorAll('.report-card.available').forEach(card => {
