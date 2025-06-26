@@ -224,12 +224,44 @@
             background: linear-gradient(90deg, #dc3545, #fd7e14);
         }
         
+        .pagi-balance::before {
+            background: linear-gradient(90deg, #ffc107, #ff6b6b);
+        }
+        
         .merkantil-income::before {
             background: linear-gradient(90deg, #17a2b8, #20c997);
         }
         
         .merkantil-expenses::before {
             background: linear-gradient(90deg, #6f42c1, #e83e8c);
+        }
+        
+        .merkantil-balance::before {
+            background: linear-gradient(90deg, #ffc107, #ff6b6b);
+        }
+        
+        .keren-income::before {
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+        
+        .keren-expenses::before {
+            background: linear-gradient(90deg, #dc3545, #fd7e14);
+        }
+        
+        .keren-balance::before {
+            background: linear-gradient(90deg, #ffc107, #ff6b6b);
+        }
+        
+        .beit-income::before {
+            background: linear-gradient(90deg, #17a2b8, #20c997);
+        }
+        
+        .beit-expenses::before {
+            background: linear-gradient(90deg, #6f42c1, #e83e8c);
+        }
+        
+        .beit-balance::before {
+            background: linear-gradient(90deg, #ffc107, #ff6b6b);
         }
         
         .summary-card h4 {
@@ -324,6 +356,10 @@
                         <h4>סך הוצאות בנק פאגי</h4>
                         <div class="amount">₪157,286</div>
                     </div>
+                    <div class="summary-card pagi-balance">
+                        <h4>יתרה בנק פאגי</h4>
+                        <div class="amount" style="color: #dc3545;">-₪63,915</div>
+                    </div>
                 </div>
                 
                 <!-- פירוט לפי מטרות -->
@@ -335,20 +371,17 @@
                         <h3 style="background: linear-gradient(135deg, #17a2b8, #20c997); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 20px; text-align: center;">קרן התורה</h3>
                         
                         <div class="summary-cards">
-                            <div class="summary-card">
+                            <div class="summary-card keren-income">
                                 <h4>הכנסות קרן התורה</h4>
                                 <div class="amount" style="color: #28a745;">₪75,450</div>
-                                <div style="font-size: 0.9em; color: #666;">אשראי והו"ק + העברות</div>
                             </div>
-                            <div class="summary-card">
+                            <div class="summary-card keren-expenses">
                                 <h4>הוצאות קרן התורה</h4>
                                 <div class="amount" style="color: #dc3545;">₪130,250</div>
-                                <div style="font-size: 0.9em; color: #666;">מלגות + משכורות + הוצאות</div>
                             </div>
-                            <div class="summary-card">
+                            <div class="summary-card keren-balance">
                                 <h4>יתרה קרן התורה</h4>
                                 <div class="amount" style="color: #dc3545;">-₪54,800</div>
-                                <div style="font-size: 0.9em; color: #666;">גירעון</div>
                             </div>
                         </div>
                         
@@ -424,20 +457,17 @@
                         <h3 style="background: linear-gradient(135deg, #6f42c1, #e83e8c); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 20px; text-align: center;">בית המדרש</h3>
                         
                         <div class="summary-cards">
-                            <div class="summary-card">
+                            <div class="summary-card beit-income">
                                 <h4>הכנסות בית המדרש</h4>
                                 <div class="amount" style="color: #28a745;">₪17,921</div>
-                                <div style="font-size: 0.9em; color: #666;">אשראי והו"ק</div>
                             </div>
-                            <div class="summary-card">
+                            <div class="summary-card keren-expenses">
                                 <h4>הוצאות בית המדרש</h4>
                                 <div class="amount" style="color: #dc3545;">₪27,036</div>
-                                <div style="font-size: 0.9em; color: #666;">רהיטים + הלואות + הוצאות</div>
                             </div>
-                            <div class="summary-card">
+                            <div class="summary-card beit-balance">
                                 <h4>יתרה בית המדרש</h4>
                                 <div class="amount" style="color: #dc3545;">-₪9,115</div>
-                                <div style="font-size: 0.9em; color: #666;">גירעון</div>
                             </div>
                         </div>
                         
@@ -524,14 +554,13 @@
                         <h4>סך הכנסות בנק מרכנתיל</h4>
                         <div class="amount">₪40,716</div>
                     </div>
-                    <div class="summary-card merkantil-expenses">
+                    <div class="summary-card pagi-expenses">
                         <h4>סך הוצאות בנק מרכנתיל</h4>
-                        <div class="amount">₪43,420</div>
+                        <div class="amount">₪43,820</div>
                     </div>
-                    <div class="summary-card">
+                    <div class="summary-card merkantil-balance">
                         <h4>יתרה בנק מרכנתיל</h4>
-                        <div class="amount" style="color: #dc3545;">-₪2,704</div>
-                        <div style="font-size: 0.9em; color: #666;">גירעון</div>
+                        <div class="amount" style="color: #dc3545;">-₪3,104</div>
                     </div>
                 </div>
                 
@@ -584,9 +613,13 @@
                                     <td>עמלות</td>
                                     <td>318</td>
                                 </tr>
+                                <tr class="subcategory-row">
+                                    <td>חוב פולק</td>
+                                    <td>400</td>
+                                </tr>
                                 <tr class="total-row">
                                     <td>סך הכל</td>
-                                    <td>43,420</td>
+                                    <td>43,820</td>
                                 </tr>
                             </tbody>
                         </table>
