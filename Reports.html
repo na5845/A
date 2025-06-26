@@ -321,11 +321,11 @@
             }
 
             .back-button {
-                position: relative;
-                top: auto;
-                right: auto;
-                margin-bottom: 20px;
-                align-self: flex-start;
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 10px 20px;
+                font-size: 0.8em;
             }
 
             .header {
@@ -387,10 +387,10 @@
 <body>
     <div class="container">
         <!-- כפתור חזרה לדף הקודם -->
-        <button class="back-button" onclick="goBack()">
+        <a href="https://na5845.github.io/Dashboard/#" class="back-button">
             <span class="back-arrow">→</span>
             לדף הקודם
-        </button>
+        </a>
 
         <!-- כותרת ראשית -->
         <div class="header">
@@ -636,12 +636,7 @@
     <script>
         // פונקציית חזרה לדף הקודם
         function goBack() {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                // אם אין היסטוריה, נווט לדף בית או דף ראשי
-                window.location.href = '/';
-            }
+            window.location.href = 'https://na5845.github.io/Dashboard/#';
         }
 
         // פונקציונליות החלפת שנים
