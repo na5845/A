@@ -27,6 +27,82 @@
             color: white;
             padding: 30px;
             text-align: center;
+            position: relative;
+        }
+        
+        .back-button {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .details-button {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(46, 204, 113, 0.2);
+            border: 2px solid rgba(46, 204, 113, 0.4);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-50%) translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .details-button:hover {
+            background: rgba(46, 204, 113, 0.3);
+            border-color: rgba(46, 204, 113, 0.6);
+            transform: translateY(-50%) translateY(-2px);
+            box-shadow: 0 8px 20px rgba(46, 204, 113, 0.3);
+        }
+        
+        .back-button:active {
+            transform: translateY(-50%) translateY(0);
+        }
+        
+        .details-button:active {
+            transform: translateY(-50%) translateY(0);
+        }
+        
+        .back-arrow, .forward-arrow {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+        
+        .back-button:hover .back-arrow {
+            transform: translateX(3px);
+        }
+        
+        .details-button:hover .forward-arrow {
+            transform: translateX(-3px);
         }
         
         .header h1 {
@@ -343,12 +419,26 @@
             .header h1 {
                 font-size: 2em;
             }
+            
+            .back-button {
+                right: 15px;
+                padding: 8px 15px;
+                font-size: 0.8em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
+            <button class="back-button" onclick="goBack()">
+                <span class="back-arrow">→</span>
+                לדף הקודם
+            </button>
+            <a href="https://na5845.github.io/A/page2.html" class="details-button">
+                פירוט פאגי - מרכנתיל
+                <span class="forward-arrow">←</span>
+            </a>
             <h1>דוח הכנסות והוצאות</h1>
             <div class="period">חודש מאי 2025</div>
         </div>
@@ -654,6 +744,11 @@
     </div>
 
     <script>
+        // פונקציית חזרה לדף הקודם
+        function goBack() {
+            window.location.href = 'https://na5845.github.io/A/Reports.html#';
+        }
+
         function toggleDetails(category) {
             const detailRows = document.querySelectorAll('[id^="' + category + '-"]');
             const expandableRow = event.currentTarget;
