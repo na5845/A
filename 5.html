@@ -1,4 +1,693 @@
-const occasionalIncome = {
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחולל דוחות כספיים</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .form-section h2 {
+            color: #495057;
+            margin: 0 0 25px 0;
+            font-size: 1.4em;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #dee2e6;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        input[type="number"]:focus, input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        .subsection {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border: 1px solid #dee2e6;
+        }
+        
+        .subsection h3 {
+            margin: 0 0 15px 0;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        
+        .btn {
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            color: white;
+        }
+        
+        .btn-sample {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+            box-shadow: 0 8px 20px rgba(111, 66, 193, 0.3);
+        }
+        
+        .btn-preview {
+            background: linear-gradient(135deg, #17a2b8, #20c997);
+            box-shadow: 0 8px 20px rgba(23, 162, 184, 0.3);
+        }
+        
+        .btn-generate {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.2);
+        }
+        
+        .button-container {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e9ecef;
+        }
+        
+        .output-area {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            border: 2px solid #e9ecef;
+            display: none;
+        }
+        
+        .file-output {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .download-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .download-btn:hover {
+            background: #0056b3;
+        }
+        
+        .code-preview {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        
+        .custom-expense-item {
+            background: #fff;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .custom-expense-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+        
+        .custom-expense-header input {
+            flex: 1;
+        }
+        
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            min-width: 60px;
+        }
+        
+        .remove-btn:hover {
+            background: #c82333;
+        }
+        
+        .add-sub-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+        
+        .add-sub-btn:hover {
+            background: #138496;
+        }
+        
+        .sub-expenses {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .sub-expense-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .sub-expense-item input {
+            margin: 0;
+        }
+        
+        .sub-expense-name {
+            flex: 2;
+        }
+        
+        .sub-expense-amount {
+            flex: 1;
+        }
+        
+        .remove-sub-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7em;
+        }
+        
+        .remove-sub-btn:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>מחולל דוחות כספיים אוטומטי</h1>
+            <p>הזן נתונים חודשיים וקבל דוחות מעוצבים מוכנים</p>
+        </div>
+        
+        <div class="content">
+            <!-- פרטי החודש -->
+            <div class="form-section">
+                <h2>פרטי החודש</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="month">חודש:</label>
+                        <select id="month" required>
+                            <option value="">בחר חודש</option>
+                            <option value="1">ינואר</option>
+                            <option value="2">פברואר</option>
+                            <option value="3">מרץ</option>
+                            <option value="4">אפריל</option>
+                            <option value="5">מאי</option>
+                            <option value="6">יוני</option>
+                            <option value="7">יולי</option>
+                            <option value="8">אוגוסט</option>
+                            <option value="9">ספטמבר</option>
+                            <option value="10">אוקטובר</option>
+                            <option value="11">נובמבר</option>
+                            <option value="12">דצמבר</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="year">שנה:</label>
+                        <input type="number" id="year" value="2025" min="2020" max="2030" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="totalDonors">סך תורמים:</label>
+                        <input type="number" id="totalDonors" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="totalRecipients">סך מקבלי מלגות:</label>
+                        <input type="number" id="totalRecipients" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="totalScholarships">סך מלגות שחולקו (₪):</label>
+                        <input type="number" id="totalScholarships" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="previousBalance">יתרת מלגות קודמות (₪):</label>
+                        <input type="number" id="previousBalance" min="0" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- הכנסות -->
+            <div class="form-section">
+                <h2>הכנסות</h2>
+                
+                <div class="subsection">
+                    <h3>תרומות קבועות</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="regularCredit">אשראי (₪):</label>
+                            <input type="number" id="regularCredit" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="regularBank">בנקאי (₪):</label>
+                            <input type="number" id="regularBank" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="regularCash">מזומן (₪):</label>
+                            <input type="number" id="regularCash" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="regularTransfers">העברות (₪):</label>
+                            <input type="number" id="regularTransfers" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="regularChecks">שקים (₪):</label>
+                            <input type="number" id="regularChecks" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>תרומות מזדמנות</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="occasionalCredit">אשראי (₪):</label>
+                            <input type="number" id="occasionalCredit" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="occasionalBank">בנקאי (₪):</label>
+                            <input type="number" id="occasionalBank" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="occasionalCash">מזומן (₪):</label>
+                            <input type="number" id="occasionalCash" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="occasionalTransfers">העברות (₪):</label>
+                            <input type="number" id="occasionalTransfers" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="occasionalChecks">שקים (₪):</label>
+                            <input type="number" id="occasionalChecks" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- הוצאות -->
+            <div class="form-section">
+                <h2>הוצאות</h2>
+                
+                <div class="subsection">
+                    <h3>משכורות</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="salaryAbraham">אברהם פלק (₪):</label>
+                            <input type="number" id="salaryAbraham" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="salaryShlomo">שלמה מאיר קליין (₪):</label>
+                            <input type="number" id="salaryShlomo" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="salaryNachman">נחמן אייזנבאך (₪):</label>
+                            <input type="number" id="salaryNachman" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>הוצאות משרד</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="officeRent">שכירות (₪):</label>
+                            <input type="number" id="officeRent" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="officeUtilities">חשמל-מים-ועד (₪):</label>
+                            <input type="number" id="officeUtilities" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>הוצאות אחרות</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="debtPolak">חוב לפולק (₪):</label>
+                            <input type="number" id="debtPolak" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="advertising">הוצאות פרסום (₪):</label>
+                            <input type="number" id="advertising" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="passoverDebt">חוב פסח (₪):</label>
+                            <input type="number" id="passoverDebt" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="software">תוכנות (₪):</label>
+                            <input type="number" id="software" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="commissions">עמלות (₪):</label>
+                            <input type="number" id="commissions" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="deferredCharges">חיובים שנדחו (₪):</label>
+                            <input type="number" id="deferredCharges" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- הוצאות מותאמות אישית -->
+                <div class="subsection">
+                    <h3>הוצאות מותאמות אישית 
+                        <button type="button" class="btn" style="background: #28a745; color: white; padding: 8px 16px; margin-right: 15px; font-size: 0.9em;" onclick="addCustomExpense()">+ הוסף הוצאה</button>
+                    </h3>
+                    <div id="customExpenses">
+                        <!-- הוצאות מותאמות יתווספו כאן -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- נתוני בנקים -->
+            <div class="form-section">
+                <h2>פירוט לפי בנקים</h2>
+                
+                <div class="subsection">
+                    <h3>בנק פאגי - קרן התורה</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pagiKerenIncome">הכנסות קרן התורה (₪):</label>
+                            <input type="number" id="pagiKerenIncome" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="pagiKerenScholarships">מלגות קרן התורה (₪):</label>
+                            <input type="number" id="pagiKerenScholarships" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="pagiKerenSalaries">משכורות קרן התורה (₪):</label>
+                            <input type="number" id="pagiKerenSalaries" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>בנק פאגי - בית המדרש</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pagiBeitIncome">הכנסות בית המדרש (₪):</label>
+                            <input type="number" id="pagiBeitIncome" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="pagiBeitExpenses">הוצאות בית המדרש (₪):</label>
+                            <input type="number" id="pagiBeitExpenses" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <h3>בנק מרכנתיל</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="merkantilIncome">הכנסות מרכנתיל (₪):</label>
+                            <input type="number" id="merkantilIncome" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="merkantilScholarships">מלגות מרכנתיל (₪):</label>
+                            <input type="number" id="merkantilScholarships" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="merkantilSalaries">משכורות מרכנתיל (₪):</label>
+                            <input type="number" id="merkantilSalaries" min="0" value="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-container">
+                <button type="button" class="btn btn-sample" onclick="loadSampleData()">טען נתונים לדוגמה (מאי 2025)</button>
+                <button type="button" class="btn btn-preview" onclick="previewData()">תצוגה מקדימה</button>
+                <button type="button" class="btn btn-generate" onclick="generateReports()">צור דוחות</button>
+            </div>
+
+            <div id="outputArea" class="output-area">
+                <h3>דוחות שנוצרו</h3>
+                <div id="generatedFiles"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // משתנים גלובליים
+        let generatedFilesData = [];
+        let customExpenseCounter = 0;
+        
+        const monthNames = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+        // הוספת הוצאה מותאמת אישית
+        function addCustomExpense() {
+            customExpenseCounter++;
+            const customExpensesContainer = document.getElementById('customExpenses');
+            
+            const expenseDiv = document.createElement('div');
+            expenseDiv.className = 'custom-expense-item';
+            expenseDiv.id = `custom-expense-${customExpenseCounter}`;
+            
+            expenseDiv.innerHTML = `
+                <div class="custom-expense-header">
+                    <div class="form-group" style="flex: 2; margin: 0;">
+                        <label>שם ההוצאה:</label>
+                        <input type="text" id="customExpenseName-${customExpenseCounter}" placeholder="לדוגמה: הוצאות נסיעות">
+                    </div>
+                    <div class="form-group" style="flex: 1; margin: 0;">
+                        <label>סכום כולל (₪):</label>
+                        <input type="number" id="customExpenseAmount-${customExpenseCounter}" min="0" value="0">
+                    </div>
+                    <button type="button" class="remove-btn" onclick="removeCustomExpense(${customExpenseCounter})">מחק</button>
+                </div>
+                <button type="button" class="add-sub-btn" onclick="addSubExpense(${customExpenseCounter})">+ הוסף פירוט</button>
+                <div class="sub-expenses" id="subExpenses-${customExpenseCounter}">
+                    <!-- תתי הוצאות יתווספו כאן -->
+                </div>
+            `;
+            
+            customExpensesContainer.appendChild(expenseDiv);
+        }
+
+        // הסרת הוצאה מותאמת אישית
+        function removeCustomExpense(id) {
+            const expenseDiv = document.getElementById(`custom-expense-${id}`);
+            if (expenseDiv) {
+                expenseDiv.remove();
+            }
+        }
+
+        // הוספת תת הוצאה
+        function addSubExpense(parentId) {
+            const subExpensesContainer = document.getElementById(`subExpenses-${parentId}`);
+            const subExpenseId = `${parentId}-${Date.now()}`;
+            
+            const subExpenseDiv = document.createElement('div');
+            subExpenseDiv.className = 'sub-expense-item';
+            subExpenseDiv.id = `sub-expense-${subExpenseId}`;
+            
+            subExpenseDiv.innerHTML = `
+                <input type="text" class="sub-expense-name" placeholder="פירוט" id="subExpenseName-${subExpenseId}">
+                <input type="number" class="sub-expense-amount" placeholder="סכום" min="0" value="0" id="subExpenseAmount-${subExpenseId}">
+                <button type="button" class="remove-sub-btn" onclick="removeSubExpense('${subExpenseId}')">×</button>
+            `;
+            
+            subExpensesContainer.appendChild(subExpenseDiv);
+        }
+
+        // הסרת תת הוצאה
+        function removeSubExpense(id) {
+            const subExpenseDiv = document.getElementById(`sub-expense-${id}`);
+            if (subExpenseDiv) {
+                subExpenseDiv.remove();
+            }
+        }
+
+        // טעינת נתונים לדוגמה
+        function loadSampleData() {
+            console.log('טוען נתונים לדוגמה...');
+            
+            document.getElementById('month').value = '5';
+            document.getElementById('year').value = '2025';
+            document.getElementById('totalDonors').value = '424';
+            document.getElementById('totalRecipients').value = '178';
+            document.getElementById('totalScholarships').value = '103091';
+            document.getElementById('previousBalance').value = '68744';
+            
+            document.getElementById('regularCredit').value = '64204';
+            document.getElementById('regularBank').value = '33846';
+            document.getElementById('regularCash').value = '8450';
+            document.getElementById('regularTransfers').value = '2820';
+            document.getElementById('regularChecks').value = '0';
+            
+            document.getElementById('salaryAbraham').value = '9400';
+            document.getElementById('salaryShlomo').value = '9400';
+            document.getElementById('salaryNachman').value = '1750';
+            
+            document.getElementById('officeRent').value = '2550';
+            document.getElementById('officeUtilities').value = '450';
+            
+            document.getElementById('debtPolak').value = '11100';
+            document.getElementById('advertising').value = '3500';
+            document.getElementById('passoverDebt').value = '3500';
+            document.getElementById('software').value = '1729';
+            document.getElementById('commissions').value = '582';
+            document.getElementById('deferredCharges').value = '7544';
+            
+            document.getElementById('pagiKerenIncome').value = '75450';
+            document.getElementById('pagiKerenScholarships').value = '79974';
+            document.getElementById('pagiKerenSalaries').value = '8750';
+            
+            document.getElementById('pagiBeitIncome').value = '17921';
+            document.getElementById('pagiBeitExpenses').value = '27036';
+            
+            document.getElementById('merkantilIncome').value = '40716';
+            document.getElementById('merkantilScholarships').value = '21217';
+            document.getElementById('merkantilSalaries').value = '7000';
+            
+            alert('נתונים לדוגמה נטענו בהצלחה! כעת לחץ על "צור דוחות"');
+        }
+
+        // תצוגה מקדימה
+        function previewData() {
+            console.log('מציג תצוגה מקדימה...');
+            const data = collectFormData();
+            
+            if (!data.month || !data.year) {
+                alert('נא למלא את פרטי החודש והשנה');
+                return;
+            }
+            
+            const monthName = monthNames[data.month];
+            const summary = `תצוגה מקדימה:\n\nחודש: ${monthName} ${data.year}\nסך הכנסות: ₪${data.totalIncome.toLocaleString()}\nסך הוצאות: ₪${data.totalExpenses.toLocaleString()}\nיתרה: ${data.balance >= 0 ? '' : '-'}₪${Math.abs(data.balance).toLocaleString()}`;
+            
+            alert(summary);
+        }
+
+        // איסוף נתונים מהטופס
+        function collectFormData() {
+            const month = parseInt(document.getElementById('month').value) || 0;
+            const year = parseInt(document.getElementById('year').value) || 0;
+            const totalDonors = parseInt(document.getElementById('totalDonors').value) || 0;
+            const totalRecipients = parseInt(document.getElementById('totalRecipients').value) || 0;
+            const totalScholarships = parseInt(document.getElementById('totalScholarships').value) || 0;
+            const previousBalance = parseInt(document.getElementById('previousBalance').value) || 0;
+
+            const regularIncome = {
+                credit: parseInt(document.getElementById('regularCredit').value) || 0,
+                bank: parseInt(document.getElementById('regularBank').value) || 0,
+                cash: parseInt(document.getElementById('regularCash').value) || 0,
+                transfers: parseInt(document.getElementById('regularTransfers').value) || 0,
+                checks: parseInt(document.getElementById('regularChecks').value) || 0
+            };
+
+            const occasionalIncome = {
                 credit: parseInt(document.getElementById('occasionalCredit').value) || 0,
                 bank: parseInt(document.getElementById('occasionalBank').value) || 0,
                 cash: parseInt(document.getElementById('occasionalCash').value) || 0,
