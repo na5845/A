@@ -1,0 +1,4795 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase } from './supabaseClient';
+import { Search, Plus, Users, DollarSign, Calendar, Activity, ChevronRight, Phone, Mail, MapPin, Edit, Save, X, Loader, AlertCircle, Upload, Tag, Download, User, Home, Briefcase, Baby, CreditCard, Settings, Trash2, Info, Filter, Bookmark, BookmarkPlus, MessageSquare, Bell, Clock, FileText } from 'lucide-react';
+
+// קומפוננט input נפרד לסינון מתקדם עם כפתור אישור - גרסה מצומצמת
+const FilterInput = React.memo(({ value, onApply, placeholder, type = "text", dir = "rtl", className = "border rounded px-2 py-1 text-xs" }) => {
+  const [localValue, setLocalValue] = useState(value || '');
+
+  useEffect(() => {
+    setLocalValue(value || '');
+  }, [value]);
+
+  const handleApply = useCallback(() => {
+    onApply(localValue);
+  }, [localValue, onApply]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleApply();
+    }
+  }, [handleApply]);
+
+  return (
+    <div className="flex gap-1 flex-1 min-w-0">
+      <input
+        type={type}
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className={`${className} min-w-0 flex-1`}
+        dir={dir}
+      />
+      <button
+        onClick={handleApply}
+        className="bg-green-500 text-white px-1 py-1 rounded text-xs hover:bg-green-600 flex-shrink-0"
+        title="החל סינון"
+      >
+        ✓
+      </button>
+    </div>
+  );
+});
+
+// קומפוננט חיפוש נפרד עם state פנימי
+const SearchInput = React.memo(({ onSearch, placeholder = "הקלד טקסט לחיפוש ולחץ על המגדלת..." }) => {
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
+
+  const handleSearchClick = useCallback(() => {
+    onSearch(localSearchTerm);
+  }, [localSearchTerm, onSearch]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearchClick();
+    }
+  }, [handleSearchClick]);
+
+  return (
+    <div className="relative flex-1">
+      <input
+        type="text"
+        placeholder={placeholder}
+        className="w-full pr-4 pl-12 py-2 border rounded-lg"
+        value={localSearchTerm}
+        onChange={(e) => setLocalSearchTerm(e.target.value)}
+        onKeyDown={handleKeyDown}
+        dir="rtl"
+      />
+      <button
+        onClick={handleSearchClick}
+        className="absolute left-2 top-1/2 transform -translate-y-1/2 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-full p-2 transition-colors"
+        title="חפש עכשיו"
+      >
+        <Search size={16} />
+      </button>
+    </div>
+  );
+});
+
+// קומפוננט לשמירת סינון כתווית
+const SaveFilterDialog = ({ onSave, onClose, tags, editingFilter = null }) => {
+  const [selectedTagId, setSelectedTagId] = useState(editingFilter?.tagId || '');
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#3B82F6');
+  const [isCreatingNew, setIsCreatingNew] = useState(!editingFilter);
+
+  useEffect(() => {
+    if (editingFilter) {
+      setSelectedTagId(editingFilter.tagId);
+      setIsCreatingNew(false);
+    }
+  }, [editingFilter]);
+
+  const handleSave = () => {
+    if (isCreatingNew) {
+      if (!newTagName) {
+        alert('נא להזין שם לתווית');
+        return;
+      }
+      onSave({
+        isNew: true,
+        tagName: newTagName,
+        tagColor: newTagColor,
+        filterId: editingFilter?.id
+      });
+    } else {
+      if (!selectedTagId) {
+        alert('נא לבחור תווית');
+        return;
+      }
+      onSave({
+        isNew: false,
+        tagId: selectedTagId,
+        filterId: editingFilter?.id
+      });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-bold mb-4">
+          {editingFilter ? 'עדכון סינון שמור' : 'שמור סינון כתווית'}
+        </h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {editingFilter ? 'עדכון סינון בתווית' : 'בחר איך לשמור'}
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={!isCreatingNew}
+                  onChange={() => setIsCreatingNew(false)}
+                  className="rounded"
+                />
+                <span>{editingFilter ? 'עדכן בתווית הקיימת' : 'הוסף לתווית קיימת'}</span>
+              </label>
+              {!editingFilter && (
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={isCreatingNew}
+                    onChange={() => setIsCreatingNew(true)}
+                    className="rounded"
+                  />
+                  <span>צור תווית חדשה</span>
+                </label>
+              )}
+            </div>
+          </div>
+
+          {!isCreatingNew ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">בחר תווית</label>
+              <select
+                value={selectedTagId}
+                onChange={(e) => setSelectedTagId(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="">בחר תווית...</option>
+                {tags.map(tag => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">שם התווית החדשה</label>
+                <input
+                  type="text"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  placeholder="לדוגמה: משפחות גדולות בתל אביב"
+                  className="w-full border rounded-lg px-3 py-2"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">צבע התווית</label>
+                <input
+                  type="color"
+                  value={newTagColor}
+                  onChange={(e) => setNewTagColor(e.target.value)}
+                  className="w-12 h-10 border rounded cursor-pointer"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            ביטול
+          </button>
+          <button
+            onClick={handleSave}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+          >
+            {editingFilter ? 'עדכן סינון' : 'שמור סינון'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// קומפוננט חיפוש וסינון
+const SearchAndFilterSection = React.memo(({ 
+  onSearch,
+  showFilters, 
+  setShowFilters, 
+  hasActiveFilters, 
+  clearAllFilters,
+  tags,
+  contacts,
+  contactTags,
+  selectedFilterTags,
+  setSelectedFilterTags,
+  tagFilterMode,
+  setTagFilterMode,
+  selectedStatusFilter,
+  setSelectedStatusFilter,
+  columnFilters,
+  setColumnFilters,
+  addColumnFilter,
+  updateColumnFilter,
+  removeColumnFilter,
+  availableColumns,
+  getFilterTypes,
+  saveFilterAsTag,
+  loadSavedFilter,
+  savedFilters,
+  editSavedFilter,
+  actualSearchTerm,
+  setActualSearchTerm
+}) => {
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [editingFilter, setEditingFilter] = useState(null);
+  
+const toggleTagFilter = (tagId) => {
+  // בדיקה אם לתווית יש סינון שמור
+  const tag = tags.find(t => t.id === tagId);
+  if (tag?.saved_filters && tag.saved_filters.length > 0) {
+    // אם יש סינון שמור, טען אותו באמצעות הפונקציה שהועברה
+    loadSavedFilter(tag.saved_filters[0]);
+  } else {
+    // אחרת, בצע סינון רגיל לפי תווית
+    if (selectedFilterTags.includes(tagId)) {
+      setSelectedFilterTags(selectedFilterTags.filter(id => id !== tagId));
+    } else {
+      setSelectedFilterTags([...selectedFilterTags, tagId]);
+    }
+  }
+};
+
+  const canSaveFilter = hasActiveFilters && (
+    actualSearchTerm ||
+    selectedFilterTags.length > 0 || 
+    selectedStatusFilter || 
+    columnFilters.some(f => f.column && f.value)
+  );
+
+  const handleEditFilter = (filter) => {
+    // טוען את הסינון
+    loadSavedFilter(filter);
+    // פותח דיאלוג עריכה
+    setEditingFilter(filter);
+    setShowSaveDialog(true);
+  };
+
+  return (
+    <>
+      <div className="flex gap-3 mb-3">
+        <SearchInput onSearch={onSearch} />
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+            showFilters ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          <Filter size={20} />
+          סינון מתקדם
+          {hasActiveFilters && (
+            <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+              !
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* פאנל סינון מתקדם */}
+      {showFilters && (
+        <div className="bg-gray-50 rounded-lg p-4 space-y-4 mb-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-gray-700">סינון מתקדם</h3>
+            <div className="flex gap-2">
+              {canSaveFilter && (
+                <button
+                  onClick={() => {
+                    setEditingFilter(null);
+                    setShowSaveDialog(true);
+                  }}
+                  className="text-sm bg-green-500 text-white px-3 py-1 rounded flex items-center gap-1 hover:bg-green-600"
+                  title="שמור סינון נוכחי כתווית"
+                >
+                  <BookmarkPlus size={16} />
+                  שמור סינון
+                </button>
+              )}
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1"
+                >
+                  <X size={16} />
+                  נקה הכל
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* סינון לפי תוויות */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-600">תוויות וסינונים מהירים</label>
+              {selectedFilterTags.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">מצב סינון:</span>
+                  <select
+                    value={tagFilterMode}
+                    onChange={(e) => setTagFilterMode(e.target.value)}
+                    className="text-xs border rounded px-2 py-1"
+                  >
+                    <option value="or">לפחות אחת (OR)</option>
+                    <option value="and">כל התוויות (AND)</option>
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setSelectedFilterTags([]);
+                  clearAllFilters();
+                }}
+                className={`px-3 py-1 rounded-full text-sm transition-all ${
+                  selectedFilterTags.length === 0 && !hasActiveFilters ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                הכל ({contacts.length})
+              </button>
+              {tags.map(tag => {
+                const hasSavedFilter = tag.saved_filters && tag.saved_filters.length > 0;
+                const count = !hasSavedFilter ? contacts.filter(c => 
+                  contactTags[c.id] && contactTags[c.id].some(t => t.id === tag.id)
+                ).length : null;
+                const isSelected = selectedFilterTags.includes(tag.id);
+                
+                return (
+                  <div key={tag.id} className="relative group">
+                    <button
+                      onClick={() => toggleTagFilter(tag.id)}
+                      className={`px-3 py-1 rounded-full text-sm transition-all flex items-center gap-1 ${
+                        isSelected ? 'text-white shadow-md ring-2 ring-offset-1' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                      style={isSelected ? { 
+                        backgroundColor: tag.color,
+                        ringColor: tag.color 
+                      } : {}}
+                    >
+                      {hasSavedFilter && <Bookmark size={12} />}
+                      {tag.name} {count !== null && `(${count})`}
+                      {isSelected && <span className="mr-1">✓</span>}
+                    </button>
+                    {hasSavedFilter && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditFilter({...tag.saved_filters[0], tagId: tag.id, tagName: tag.name});
+                        }}
+                        className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600"
+                        title="ערוך סינון"
+                      >
+                        <Edit size={12} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* סינון לפי סטטוס */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-2">סטטוס פעילות</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedStatusFilter(null)}
+                className={`px-3 py-1 rounded-full text-sm transition-all ${
+                  !selectedStatusFilter ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                הכל ({contacts.length})
+              </button>
+              <button
+                onClick={() => setSelectedStatusFilter('active')}
+                className={`px-3 py-1 rounded-full text-sm transition-all ${
+                  selectedStatusFilter === 'active' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                פעילים ({contacts.filter(c => c.status === 'active').length})
+              </button>
+              <button
+                onClick={() => setSelectedStatusFilter('inactive')}
+                className={`px-3 py-1 rounded-full text-sm transition-all ${
+                  selectedStatusFilter === 'inactive' ? 'bg-gray-500 text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                לא פעילים ({contacts.filter(c => c.status === 'inactive').length})
+              </button>
+            </div>
+          </div>
+
+          {/* סינון לפי עמודות מתקדם */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-600">סינון לפי עמודות</label>
+              <button
+                onClick={addColumnFilter}
+                className="bg-blue-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1 hover:bg-blue-600"
+              >
+                <Plus size={14} />
+                הוסף סינון
+              </button>
+            </div>
+            
+            {columnFilters.length === 0 ? (
+              <div className="text-gray-500 text-sm text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">
+                לחץ על "הוסף סינון" כדי להוסיף סינון לפי עמודה
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {columnFilters.map((filter) => {
+                  const selectedColumn = availableColumns.find(col => col.key === filter.column);
+                  const filterTypes = selectedColumn ? getFilterTypes(selectedColumn.type) : [];
+                  
+                  return (
+                    <div key={filter.id} className="flex items-center gap-1 p-2 border rounded-lg bg-white">
+                      <select
+                        value={filter.column}
+                        onChange={(e) => updateColumnFilter(filter.id, 'column', e.target.value)}
+                        className="border rounded px-1 py-1 text-xs min-w-0 flex-shrink-0"
+                        style={{ minWidth: '100px' }}
+                      >
+                        <option value="">בחר עמודה</option>
+                        <optgroup label="שדות בסיסיים">
+                          {availableColumns.filter(col => !col.key.startsWith('custom_')).map(col => (
+                            <option key={col.key} value={col.key}>{col.label}</option>
+                          ))}
+                        </optgroup>
+                        {availableColumns.filter(col => col.key.startsWith('custom_')).length > 0 && (
+                          <optgroup label="שדות מותאמים">
+                            {availableColumns.filter(col => col.key.startsWith('custom_')).map(col => (
+                              <option key={col.key} value={col.key}>{col.label}</option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                      
+                      {filter.column && (
+                        <select
+                          value={filter.type}
+                          onChange={(e) => updateColumnFilter(filter.id, 'type', e.target.value)}
+                          className="border rounded px-1 py-1 text-xs min-w-0 flex-shrink-0"
+                          style={{ minWidth: '80px' }}
+                        >
+                          {filterTypes.map(type => (
+                            <option key={type.value} value={type.value}>{type.label}</option>
+                          ))}
+                        </select>
+                      )}
+                      
+                      {filter.column && (
+                        <>
+                          {selectedColumn?.type === 'select' ? (
+                            <select
+                              value={filter.value}
+                              onChange={(e) => updateColumnFilter(filter.id, 'value', e.target.value)}
+                              className="border rounded px-1 py-1 text-xs min-w-0 flex-1"
+                            >
+                              <option value="">בחר ערך</option>
+                              {selectedColumn.options?.map(option => (
+                                <option key={option} value={option}>
+                                  {option === 'active' ? 'פעיל' : option === 'inactive' ? 'לא פעיל' : option}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <FilterInput
+                              type={selectedColumn?.type === 'date' ? 'date' : selectedColumn?.type === 'number' ? 'number' : 'text'}
+                              value={filter.value}
+                              onApply={(newValue) => updateColumnFilter(filter.id, 'value', newValue)}
+                              placeholder="ערך לסינון"
+                              className="border rounded px-1 py-1 text-xs"
+                              dir="rtl"
+                            />
+                          )}
+                          
+                          {filter.type === 'between' && selectedColumn?.type === 'date' && (
+                            <FilterInput
+                              type="date"
+                              value={filter.value2}
+                              onApply={(newValue) => updateColumnFilter(filter.id, 'value2', newValue)}
+                              placeholder="תאריך סיום"
+                              className="border rounded px-1 py-1 text-xs"
+                            />
+                          )}
+                        </>
+                      )}
+                      
+                      <button
+                        onClick={() => removeColumnFilter(filter.id)}
+                        className="text-red-500 hover:text-red-700 flex-shrink-0 px-1"
+                        title="הסר סינון"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* דיאלוג שמירת סינון */}
+      {showSaveDialog && (
+        <SaveFilterDialog
+          tags={tags}
+          editingFilter={editingFilter}
+          onSave={(data) => {
+            saveFilterAsTag(data);
+            setShowSaveDialog(false);
+            setEditingFilter(null);
+          }}
+          onClose={() => {
+            setShowSaveDialog(false);
+            setEditingFilter(null);
+          }}
+        />
+      )}
+    </>
+  );
+});
+
+// קומפוננט הצגת סינונים פעילים
+const ActiveFiltersDisplay = React.memo(({ 
+  hasActiveFilters, 
+  actualSearchTerm, 
+  clearSearchTerm,
+  selectedFilterTags,
+  setSelectedFilterTags,
+  tagFilterMode,
+  tags,
+  selectedStatusFilter,
+  setSelectedStatusFilter,
+  columnFilters,
+  removeColumnFilter,
+  availableColumns,
+  getFilterTypes
+}) => {
+  const removeTagFilter = (tagId) => {
+    setSelectedFilterTags(selectedFilterTags.filter(id => id !== tagId));
+  };
+
+  return (
+    hasActiveFilters ? (
+      <div className="flex items-center gap-2 mb-3 text-sm flex-wrap">
+        <span className="text-gray-600">סינונים פעילים:</span>
+        {actualSearchTerm && (
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex items-center gap-1">
+            חיפוש: "{actualSearchTerm}"
+            <button onClick={clearSearchTerm}>
+              <X size={14} />
+            </button>
+          </span>
+        )}
+        {selectedFilterTags.length > 0 && (
+          <>
+            {selectedFilterTags.length > 1 && (
+              <span className="text-xs text-gray-500">
+                ({tagFilterMode === 'and' ? 'כל התוויות' : 'לפחות אחת'})
+              </span>
+            )}
+            {selectedFilterTags.map(tagId => {
+              const tag = tags.find(t => t.id === tagId);
+              return tag ? (
+                <span 
+                  key={tagId}
+                  className="text-white px-2 py-1 rounded-full flex items-center gap-1"
+                  style={{ backgroundColor: tag.color }}
+                >
+                  {tag.name}
+                  <button onClick={() => removeTagFilter(tagId)}>
+                    <X size={14} />
+                  </button>
+                </span>
+              ) : null;
+            })}
+          </>
+        )}
+        {selectedStatusFilter && (
+          <span className={`px-2 py-1 rounded-full flex items-center gap-1 ${
+            selectedStatusFilter === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            {selectedStatusFilter === 'active' ? 'פעילים' : 'לא פעילים'}
+            <button onClick={() => setSelectedStatusFilter(null)}>
+              <X size={14} />
+            </button>
+          </span>
+        )}
+        {columnFilters.map((filter) => {
+          const column = availableColumns.find(col => col.key === filter.column);
+          const filterType = getFilterTypes(column?.type || 'text').find(t => t.value === filter.type);
+          
+          return filter.column && filter.value ? (
+            <span key={filter.id} className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full flex items-center gap-1">
+              {column?.label}: {filterType?.label} "{filter.value}"
+              {filter.value2 && ` עד "${filter.value2}"`}
+              <button onClick={() => removeColumnFilter(filter.id)}>
+                <X size={14} />
+              </button>
+            </span>
+          ) : null;
+        })}
+      </div>
+    ) : null
+  );
+});
+
+function App() {
+  window.supabase = supabase;
+  const [activeTab, setActiveTab] = useState('contacts');
+  const [contacts, setContacts] = useState([]);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [actualSearchTerm, setActualSearchTerm] = useState(''); // הטקסט שבאמת מסנן
+  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsActiveTab, setSettingsActiveTab] = useState('fields');
+  const [tags, setTags] = useState([]);
+  const [contactTags, setContactTags] = useState({});
+  const [selectedFilterTags, setSelectedFilterTags] = useState([]); // מערך של תוויות לסינון
+  const [tagFilterMode, setTagFilterMode] = useState('or'); // 'or' או 'and'
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState(null); // סינון לפי סטטוס פעיל/לא פעיל
+  const [showFilters, setShowFilters] = useState(false); // הצגת פאנל הסינון
+  const [columnFilters, setColumnFilters] = useState([]); // מערך של סינונים
+  const [savedFilters, setSavedFilters] = useState([]); // סינונים שמורים
+  
+  // הגדרות מרכזיות לכל המערכת
+  const [globalBuiltInFields, setGlobalBuiltInFields] = useState([]);
+
+  // הוספת משתנים חסרים
+  const hasActiveFilters = actualSearchTerm || selectedFilterTags.length > 0 || selectedStatusFilter || 
+    columnFilters.some(f => f.column && f.value);
+
+  const clearAllFilters = () => {
+    setActualSearchTerm('');
+    setSelectedFilterTags([]);
+    setSelectedStatusFilter(null);
+    setColumnFilters([]);
+  };
+
+  // פונקציה לביצוע חיפוש
+  const handleSearch = useCallback((searchTerm) => {
+    setActualSearchTerm(searchTerm);
+  }, []);
+
+  // פונקציה לניקוי חיפוש
+  const clearSearchTerm = useCallback(() => {
+    setActualSearchTerm('');
+  }, []);
+
+// פונקציה לשמירת סינון כתווית
+const saveFilterAsTag = async (data) => {
+  try {
+    let tagId = data.tagId;
+    
+    // אם צריך ליצור תווית חדשה
+    if (data.isNew) {
+      const { data: newTag, error: tagError } = await supabase
+        .from('tags')
+        .insert([{ 
+          name: data.tagName, 
+          color: data.tagColor,
+          saved_filters: []
+        }])
+        .select()
+        .single();
+      
+      if (tagError) throw tagError;
+      tagId = newTag.id;
+      
+      // הוספת התווית החדשה למצב המקומי מיד
+      const newTagWithFilters = { ...newTag, saved_filters: [] };
+      setTags([...tags, newTagWithFilters]);
+    }
+    
+    // שמירת הסינון
+    const filterData = {
+      id: data.filterId || Date.now(),
+      name: data.isNew ? data.tagName : tags.find(t => t.id === tagId)?.name,
+      searchTerm: actualSearchTerm,
+      selectedTags: selectedFilterTags,
+      tagFilterMode: tagFilterMode,
+      statusFilter: selectedStatusFilter,
+      columnFilters: columnFilters.filter(f => f.column && f.value)
+    };
+    
+    // עדכון metadata של התווית
+    const tag = data.isNew ? { id: tagId, saved_filters: [] } : tags.find(t => t.id === tagId);
+    let updatedFilters = tag?.saved_filters || [];
+    
+    if (data.filterId) {
+      // עדכון סינון קיים
+      updatedFilters = updatedFilters.map(f => 
+        f.id === data.filterId ? filterData : f
+      );
+    } else {
+      // הוספת סינון חדש
+      updatedFilters = [...updatedFilters, filterData];
+    }
+    
+    const { error: updateError } = await supabase
+      .from('tags')
+      .update({ saved_filters: updatedFilters })
+      .eq('id', tagId);
+    
+    if (updateError) throw updateError;
+    
+    // עדכון התוויות במצב המקומי
+    if (data.isNew) {
+      // עדכון התווית החדשה עם הסינון
+      setTags(prevTags => prevTags.map(t => 
+        t.id === tagId ? { ...t, saved_filters: updatedFilters } : t
+      ));
+    } else {
+      // עדכון תווית קיימת
+      const updatedTag = { ...tag, saved_filters: updatedFilters };
+      setTags(tags.map(t => 
+        t.id === tagId ? updatedTag : t
+      ));
+    }
+    
+    // עדכון רשימת הסינונים השמורים
+    loadSavedFilters();
+    
+    alert(data.filterId ? 'הסינון עודכן בהצלחה!' : 'הסינון נשמר בהצלחה!');
+  } catch (error) {
+    console.error('Error saving filter:', error);
+    alert('שגיאה בשמירת הסינון: ' + error.message);
+  }
+};
+
+  // פונקציה לטעינת סינון שמור
+  const loadSavedFilter = (filter) => {
+    setActualSearchTerm(filter.searchTerm || '');
+    setSelectedFilterTags(filter.selectedTags || []);
+    setTagFilterMode(filter.tagFilterMode || 'or');
+    setSelectedStatusFilter(filter.statusFilter || null);
+    setColumnFilters(filter.columnFilters || []);
+
+  };
+
+  // טעינת סינונים שמורים
+  const loadSavedFilters = () => {
+    const allSavedFilters = [];
+    tags.forEach(tag => {
+      if (tag.saved_filters) {
+        tag.saved_filters.forEach(filter => {
+          allSavedFilters.push({
+            ...filter,
+            tagId: tag.id,
+            tagName: tag.name,
+            tagColor: tag.color
+          });
+        });
+      }
+    });
+    setSavedFilters(allSavedFilters);
+  };
+
+  useEffect(() => {
+    loadSavedFilters();
+  }, [tags]);
+
+  // עדכון רשימת העמודות הזמינות לכלול שדות מותאמים
+  const [customFieldsForFilter, setCustomFieldsForFilter] = useState([]);
+  
+  // טעינת שדות מותאמים לסינון
+  useEffect(() => {
+    const fetchCustomFieldsForFilter = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('custom_fields')
+          .select('*')
+          .order('display_name');
+
+        if (error) throw error;
+        setCustomFieldsForFilter(data || []);
+      } catch (error) {
+        console.error('Error fetching custom fields for filter:', error);
+      }
+    };
+    
+    fetchCustomFieldsForFilter();
+  }, []);
+
+  // אפשרויות עמודות לסינון - כולל שדות מותאמים וסינון לפי פעילות
+  const availableColumns = useMemo(() => {
+    const builtInColumns = [
+      { key: 'first_name', label: 'שם פרטי', type: 'text' },
+      { key: 'last_name', label: 'שם משפחה', type: 'text' },
+      { key: 'phone', label: 'טלפון', type: 'text' },
+      { key: 'email', label: 'אימייל', type: 'text' },
+      { key: 'city', label: 'עיר', type: 'text' },
+      { key: 'street', label: 'רחוב', type: 'text' },
+      { key: 'house_number', label: 'מספר בית', type: 'text' },
+      { key: 'zip_code', label: 'מיקוד', type: 'text' },
+      { key: 'id_number', label: 'תעודת זהות', type: 'text' },
+      { key: 'occupation', label: 'מקצוע', type: 'text' },
+      { key: 'spouse_name', label: 'שם בן/בת זוג', type: 'text' },
+      { key: 'birth_date', label: 'תאריך לידה', type: 'date' },
+      { key: 'children_count', label: 'מספר ילדים', type: 'number' },
+      { key: 'bank_name', label: 'בנק', type: 'text' },
+      { key: 'bank_branch', label: 'סניף בנק', type: 'text' },
+      { key: 'bank_account', label: 'חשבון בנק', type: 'text' },
+      { key: 'notes', label: 'הערות', type: 'text' },
+      { key: 'status', label: 'סטטוס', type: 'select', options: ['active', 'inactive'] }
+    ];
+    
+    // הוספת שדות מותאמים - רק הפעילים
+    const customColumns = customFieldsForFilter
+      .filter(field => field.is_active) // רק שדות פעילים
+      .map(field => ({
+        key: `custom_${field.field_name}`,
+        label: `${field.display_name} (מותאם)`,
+        type: field.field_type,
+        options: field.options
+      }));
+    
+    return [...builtInColumns, ...customColumns];
+  }, [customFieldsForFilter]);
+
+  // סוגי סינון לפי סוג העמודה
+  const getFilterTypes = (columnType) => {
+    switch (columnType) {
+      case 'text':
+        return [
+          { value: 'contains', label: 'מכיל' },
+          { value: 'equals', label: 'שווה ל' },
+          { value: 'startsWith', label: 'מתחיל ב' },
+          { value: 'endsWith', label: 'מסתיים ב' },
+          { value: 'notContains', label: 'לא מכיל' }
+        ];
+      case 'number':
+        return [
+          { value: 'equals', label: 'שווה ל' },
+          { value: 'greaterThan', label: 'גדול מ' },
+          { value: 'lessThan', label: 'קטן מ' },
+          { value: 'greaterOrEqual', label: 'גדול או שווה ל' },
+          { value: 'lessOrEqual', label: 'קטן או שווה ל' }
+        ];
+      case 'date':
+        return [
+          { value: 'equals', label: 'בתאריך' },
+          { value: 'before', label: 'לפני' },
+          { value: 'after', label: 'אחרי' },
+          { value: 'between', label: 'בין תאריכים' }
+        ];
+      case 'select':
+        return [
+          { value: 'equals', label: 'שווה ל' },
+          { value: 'notEquals', label: 'לא שווה ל' }
+        ];
+      default:
+        return [{ value: 'contains', label: 'מכיל' }];
+    }
+  };
+
+  // הוספת סינון עמודה חדש
+  const addColumnFilter = () => {
+    const newFilter = {
+      id: Date.now(),
+      column: '',
+      type: 'contains',
+      value: '',
+      value2: '' // לסינון "בין" תאריכים
+    };
+    setColumnFilters([...columnFilters, newFilter]);
+  };
+
+  // עדכון סינון עמודה
+  const updateColumnFilter = (id, field, value) => {
+    setColumnFilters(columnFilters.map(filter => 
+      filter.id === id ? { ...filter, [field]: value } : filter
+    ));
+  };
+
+  // מחיקת סינון עמודה
+  const removeColumnFilter = (id) => {
+    setColumnFilters(columnFilters.filter(filter => filter.id !== id));
+  };
+
+  // בדיקה אם ערך עובר סינון
+  const checkFilterMatch = (value, filter) => {
+    if (!filter.value && filter.type !== 'equals') return true;
+    
+    const filterValue = filter.value?.toString().toLowerCase() || '';
+    const cellValue = value?.toString().toLowerCase() || '';
+    
+    switch (filter.type) {
+      case 'contains':
+        return cellValue.includes(filterValue);
+      case 'equals':
+        return cellValue === filterValue;
+      case 'startsWith':
+        return cellValue.startsWith(filterValue);
+      case 'endsWith':
+        return cellValue.endsWith(filterValue);
+      case 'notContains':
+        return !cellValue.includes(filterValue);
+      case 'notEquals':
+        return cellValue !== filterValue;
+      case 'greaterThan':
+        return parseFloat(value) > parseFloat(filter.value);
+      case 'lessThan':
+        return parseFloat(value) < parseFloat(filter.value);
+      case 'greaterOrEqual':
+        return parseFloat(value) >= parseFloat(filter.value);
+      case 'lessOrEqual':
+        return parseFloat(value) <= parseFloat(filter.value);
+      case 'before':
+        return new Date(value) < new Date(filter.value);
+      case 'after':
+        return new Date(value) > new Date(filter.value);
+      case 'between':
+        if (!filter.value2) return true;
+        const date = new Date(value);
+        return date >= new Date(filter.value) && date <= new Date(filter.value2);
+      default:
+        return true;
+    }
+  };
+
+  useEffect(() => {
+    fetchContacts();
+    fetchTags();
+    loadGlobalBuiltInFields(); // טוען הגדרות גלובליות
+  }, []);
+
+  // טעינת הגדרות מרכזיות
+  const loadGlobalBuiltInFields = () => {
+    const defaultBuiltInFields = [
+      // פרטים בסיסיים
+      { field_name: 'phone', display_name: 'טלפון', section: 'basic', is_active: true },
+      { field_name: 'email', display_name: 'אימייל', section: 'basic', is_active: true },
+      
+      // כתובת
+      { field_name: 'street', display_name: 'רחוב', section: 'address', is_active: true },
+      { field_name: 'house_number', display_name: 'מספר בית', section: 'address', is_active: true },
+      { field_name: 'city', display_name: 'עיר', section: 'address', is_active: true },
+      { field_name: 'zip_code', display_name: 'מיקוד', section: 'address', is_active: true },
+      
+      // פרטים נוספים
+      { field_name: 'id_number', display_name: 'תעודת זהות', section: 'additional', is_active: true },
+      { field_name: 'birth_date', display_name: 'תאריך לידה', section: 'additional', is_active: true },
+      { field_name: 'occupation', display_name: 'מקצוע', section: 'additional', is_active: true },
+      { field_name: 'spouse_name', display_name: 'שם בן/בת זוג', section: 'additional', is_active: true },
+      { field_name: 'children_count', display_name: 'מספר ילדים', section: 'additional', is_active: true },
+      
+      // פרטי בנק
+      { field_name: 'bank_name', display_name: 'בנק', section: 'bank', is_active: true },
+      { field_name: 'bank_branch', display_name: 'סניף', section: 'bank', is_active: true },
+      { field_name: 'bank_account', display_name: 'חשבון', section: 'bank', is_active: true },
+      
+      // שדות נוספים
+      { field_name: 'notes', display_name: 'הערות', section: 'additional', is_active: true }
+    ];
+
+    const savedSettings = localStorage.getItem('built_in_field_settings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        const mergedFields = defaultBuiltInFields.map(defaultField => {
+          const savedField = parsed.find(s => s.field_name === defaultField.field_name);
+          return savedField || defaultField;
+        });
+        setGlobalBuiltInFields(mergedFields);
+      } catch (error) {
+        console.error('Error parsing saved settings:', error);
+        setGlobalBuiltInFields(defaultBuiltInFields);
+      }
+    } else {
+      setGlobalBuiltInFields(defaultBuiltInFields);
+    }
+  };
+
+  // עדכון הגדרות גלובליות
+  const updateGlobalBuiltInField = (fieldName) => {
+    const updatedFields = globalBuiltInFields.map(f => 
+      f.field_name === fieldName ? { ...f, is_active: !f.is_active } : f
+    );
+    
+    setGlobalBuiltInFields(updatedFields);
+    localStorage.setItem('built_in_field_settings', JSON.stringify(updatedFields));
+  };
+
+  const fetchContacts = async () => {
+    try {
+      let allContacts = [];
+      let from = 0;
+      const limit = 1000;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, from + limit - 1);
+
+        if (error) throw error;
+        
+        if (!data || data.length === 0) break;
+        
+        allContacts = [...allContacts, ...data];
+        
+        if (data.length < limit) break; // אין יותר נתונים
+        
+        from += limit;
+      }
+
+      setContacts(allContacts);
+      
+      // טען תוויות לכל איש קשר
+      if (allContacts.length > 0) {
+        fetchContactTags(allContacts.map(c => c.id));
+      }
+    } catch (error) {
+      alert('שגיאה בטעינת נתונים: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTags = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setTags(data || []);
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    }
+  };
+
+  const fetchContactTags = async (contactIds) => {
+    try {
+      // עיבוד בחלקים קטנים למניעת בעיות עם כמות גדולה של IDs
+      const chunkSize = 100;
+      let allContactTags = [];
+      
+      for (let i = 0; i < contactIds.length; i += chunkSize) {
+        const chunk = contactIds.slice(i, i + chunkSize);
+        const { data, error } = await supabase
+          .from('contact_tags')
+          .select('*, tags(*)')
+          .in('contact_id', chunk);
+
+        if (error) throw error;
+        allContactTags = [...allContactTags, ...data];
+      }
+      
+      // ארגן תוויות לפי איש קשר
+      const tagsByContact = {};
+      allContactTags.forEach(ct => {
+        if (!tagsByContact[ct.contact_id]) {
+          tagsByContact[ct.contact_id] = [];
+        }
+        tagsByContact[ct.contact_id].push(ct.tags);
+      });
+      setContactTags(tagsByContact);
+    } catch (error) {
+      console.error('Error fetching contact tags:', error);
+    }
+  };
+
+  const downloadSampleCSV = async () => {
+    // קודם נטען את השדות המותאמים הפעילים
+    let activeCustomFields = [];
+    try {
+      const { data, error } = await supabase
+        .from('custom_fields')
+        .select('*')
+        .order('display_order');
+      
+      if (!error) {
+        activeCustomFields = data || [];
+      }
+    } catch (error) {
+      console.error('Error fetching custom fields for CSV:', error);
+    }
+
+    // בניית כותרות עמודות - כולל כל השדות (פעילים ולא פעילים)
+    const headers = ['שם פרטי*', 'שם משפחה*', 'סטטוס (active/inactive)*', 'תוויות (מופרד בנקודותיים)'];
+    const exampleRow = ['ישראל', 'ישראלי', 'active', 'תורם:VIP:חשוב'];
+    
+    // הוספת שדות מובנים - כולל כל השדות (לא רק הפעילים)
+    globalBuiltInFields.forEach(field => {
+      switch(field.field_name) {
+        case 'phone':
+          headers.push('טלפון');
+          exampleRow.push('050-1234567');
+          break;
+        case 'email':
+          headers.push('אימייל');
+          exampleRow.push('israel@example.com');
+          break;
+        case 'street':
+          headers.push('רחוב');
+          exampleRow.push('רחוב הרצל');
+          break;
+        case 'house_number':
+          headers.push('מספר בית');
+          exampleRow.push('15');
+          break;
+        case 'city':
+          headers.push('עיר');
+          exampleRow.push('תל אביב');
+          break;
+        case 'zip_code':
+          headers.push('מיקוד');
+          exampleRow.push('6578912');
+          break;
+        case 'id_number':
+          headers.push('תעודת זהות');
+          exampleRow.push('123456789');
+          break;
+        case 'birth_date':
+          headers.push('תאריך לידה (DD/MM/YYYY או YYYY-MM-DD)');
+          exampleRow.push('15/05/1980');
+          break;
+        case 'occupation':
+          headers.push('מקצוע');
+          exampleRow.push('מהנדס');
+          break;
+        case 'spouse_name':
+          headers.push('שם בן/בת זוג');
+          exampleRow.push('רחל');
+          break;
+        case 'children_count':
+          headers.push('מספר ילדים');
+          exampleRow.push('2');
+          break;
+        case 'bank_name':
+          headers.push('בנק');
+          exampleRow.push('בנק הפועלים');
+          break;
+        case 'bank_branch':
+          headers.push('סניף');
+          exampleRow.push('123');
+          break;
+        case 'bank_account':
+          headers.push('חשבון');
+          exampleRow.push('456789');
+          break;
+        case 'notes':
+          headers.push('הערות');
+          exampleRow.push('תורם חודשי');
+          break;
+      }
+    });
+
+    // הוספת שדות מותאמים - כולל כל השדות (לא רק הפעילים)
+    activeCustomFields.forEach(field => {
+      headers.push(field.display_name + (field.is_required ? '*' : '') + (field.is_active ? '' : ' (מושבת)'));
+      
+      // יצירת דוגמה לפי סוג השדה
+      let exampleValue = '';
+      switch(field.field_type) {
+        case 'text':
+          exampleValue = 'דוגמה';
+          break;
+        case 'number':
+          exampleValue = '10';
+          break;
+        case 'date':
+          exampleValue = '2024-01-01';
+          break;
+        case 'select':
+        case 'radio':
+          exampleValue = field.options && field.options.length > 0 ? field.options[0] : 'אפשרות1';
+          break;
+        case 'checkbox':
+          exampleValue = 'true';
+          break;
+        case 'textarea':
+          exampleValue = 'טקסט ארוך לדוגמה';
+          break;
+        default:
+          exampleValue = 'דוגמה';
+      }
+      exampleRow.push(exampleValue);
+    });
+
+    // הוסף BOM לתמיכה בעברית
+    const BOM = '\uFEFF';
+    const csvContent = BOM + headers.join(',') + '\n' + 
+                      exampleRow.join(',') + '\n' + 
+                      ['רחל', 'כהן', 'active', 'מקבל מלגה:תלמידה'].join(',');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `דוגמה_ייבוא_אנשי_קשר_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const handleFileImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    
+    if (file.name.endsWith('.csv')) {
+      reader.onload = async (event) => {
+        const text = event.target.result;
+        const rows = text.split('\n').filter(row => row.trim());
+        const headers = rows[0].split(',').map(h => h.trim());
+        
+        // טעינת שדות מותאמים פעילים
+        let activeCustomFields = [];
+        try {
+          const { data, error } = await supabase
+            .from('custom_fields')
+            .select('*')
+            .eq('is_active', true);
+          
+          if (!error) {
+            activeCustomFields = data || [];
+          }
+        } catch (error) {
+          console.error('Error fetching custom fields:', error);
+        }
+        
+        const newContacts = [];
+        const contactsWithTags = []; // מערך לשמירת התוויות לכל איש קשר
+        
+        for (let i = 1; i < rows.length; i++) {
+          const values = rows[i].split(',').map(v => v.trim());
+          if (values.length > 1) {
+            const contact = {
+              first_name: values[0] || '',
+              last_name: values[1] || '',
+              status: values[2] || 'active',
+              custom_fields: {}
+            };
+
+            // שמירת התוויות לטיפול מאוחר יותר
+            const tagsString = values[3] || '';
+            const contactTags = tagsString ? tagsString.split(':').map(t => t.trim()).filter(t => t) : [];
+
+            // מיפוי שדות לפי כותרות
+            headers.forEach((header, index) => {
+              const value = values[index] || '';
+              
+              // דילוג על השדות הבסיסיים שכבר טופלו
+              if (index <= 3) return;
+              
+              // שדות מובנים
+              if (header === 'טלפון') contact.phone = value;
+              else if (header === 'אימייל') contact.email = value;
+              else if (header === 'רחוב') contact.street = value;
+              else if (header === 'מספר בית') contact.house_number = value;
+              else if (header === 'עיר') contact.city = value;
+              else if (header === 'מיקוד') contact.zip_code = value;
+              else if (header === 'תעודת זהות') contact.id_number = value;
+              else if (header.includes('תאריך לידה')) {
+                // המרת תאריך לפורמט YYYY-MM-DD
+                if (value) {
+                  // תמיכה בפורמטים שונים של תאריך
+                  let formattedDate = value;
+                  if (value.includes('/')) {
+                    const parts = value.split('/');
+                    if (parts.length === 3) {
+                      // DD/MM/YYYY או MM/DD/YYYY
+                      if (parts[2].length === 4) {
+                        formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                      }
+                    }
+                  }
+                  contact.birth_date = formattedDate;
+                }
+              }
+              else if (header === 'מקצוע') contact.occupation = value;
+              else if (header.includes('בן/בת זוג')) contact.spouse_name = value;
+              else if (header === 'מספר ילדים') contact.children_count = parseInt(value) || 0;
+              else if (header === 'בנק') contact.bank_name = value;
+              else if (header === 'סניף') contact.bank_branch = value;
+              else if (header === 'חשבון') contact.bank_account = value;
+              else if (header === 'הערות') contact.notes = value;
+              
+              // שדות מותאמים
+              else {
+                const customField = activeCustomFields.find(f => 
+                  f.display_name === header || f.display_name === header.replace('*', '')
+                );
+                if (customField) {
+                  let processedValue = value;
+                  
+                  // עיבוד לפי סוג השדה
+                  if (customField.field_type === 'number') {
+                    processedValue = parseInt(value) || 0;
+                  } else if (customField.field_type === 'checkbox') {
+                    processedValue = value.toLowerCase() === 'true' || value === '1';
+                  }
+                  
+                  contact.custom_fields[customField.field_name] = processedValue;
+                }
+              }
+            });
+            
+            newContacts.push(contact);
+            contactsWithTags.push({ contact, tags: contactTags });
+          }
+        }
+        
+        if (newContacts.length === 0) {
+          alert('לא נמצאו אנשי קשר בקובץ');
+          return;
+        }
+        
+        try {
+          const { data, error } = await supabase
+            .from('contacts')
+            .insert(newContacts)
+            .select();
+            
+          if (error) throw error;
+          
+          // עכשיו נטפל בתוויות
+          await handleTagsForImportedContacts(data, contactsWithTags);
+          
+          setContacts([...data, ...contacts]);
+          
+          // ספירת תוויות שיובאו
+          const totalTags = contactsWithTags.reduce((sum, item) => sum + item.tags.length, 0);
+          const importMessage = `${data.length} אנשי קשר יובאו בהצלחה!` + 
+            (totalTags > 0 ? `\nכולל ${totalTags} תוויות.` : '');
+          alert(importMessage);
+        } catch (error) {
+          alert('שגיאה בייבוא: ' + error.message);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    } else {
+      alert('כרגע נתמך רק קובץ CSV. תמיכה ב-Excel בקרוב!');
+    }
+    
+    e.target.value = '';
+  };
+
+  const handleTagsForImportedContacts = async (importedContacts, contactsWithTags) => {
+    try {
+      // אוסף את כל התוויות הייחודיות מהייבוא
+      const allTagNames = new Set();
+      contactsWithTags.forEach(item => {
+        item.tags.forEach(tagName => {
+          if (tagName) allTagNames.add(tagName);
+        });
+      });
+
+      if (allTagNames.size === 0) return; // אין תוויות לטפל בהן
+
+      // בדיקה אילו תוויות כבר קיימות
+      const { data: existingTags, error: tagsError } = await supabase
+        .from('tags')
+        .select('*')
+        .in('name', Array.from(allTagNames));
+
+      if (tagsError) throw tagsError;
+
+      const existingTagsMap = {};
+      existingTags.forEach(tag => {
+        existingTagsMap[tag.name] = tag;
+      });
+
+      // יצירת תוויות חדשות שלא קיימות
+      const newTagsToCreate = Array.from(allTagNames).filter(tagName => 
+        !existingTagsMap[tagName]
+      );
+
+      let createdTags = [];
+      if (newTagsToCreate.length > 0) {
+        const newTagsData = newTagsToCreate.map(tagName => ({
+          name: tagName,
+          color: `#${Math.floor(Math.random()*16777215).toString(16)}` // צבע רנדומלי
+        }));
+
+const { data: newTags, error: createError } = await supabase
+          .from('tags')
+          .insert(newTagsData)
+          .select();
+
+        if (createError) throw createError;
+        createdTags = newTags;
+      }
+
+      // איחוד תוויות קיימות וחדשות
+      const allTags = [...existingTags, ...createdTags];
+      const tagsMap = {};
+      allTags.forEach(tag => {
+        tagsMap[tag.name] = tag;
+      });
+
+      // יצירת קשרים בין אנשי קשר לתוויות
+      const contactTagsToInsert = [];
+      contactsWithTags.forEach((item, index) => {
+        const contact = importedContacts[index];
+        item.tags.forEach(tagName => {
+          if (tagName && tagsMap[tagName]) {
+            contactTagsToInsert.push({
+              contact_id: contact.id,
+              tag_id: tagsMap[tagName].id
+            });
+          }
+        });
+      });
+
+      if (contactTagsToInsert.length > 0) {
+        const { error: linkError } = await supabase
+          .from('contact_tags')
+          .insert(contactTagsToInsert);
+
+        if (linkError) throw linkError;
+      }
+
+// עדכון התוויות במצב המקומי
+      if (createdTags.length > 0) {
+        setTags([...tags, ...createdTags]);
+      }
+
+      // עדכון תוויות אנשי הקשר במצב המקומי
+      const newContactTags = { ...contactTags };
+      contactsWithTags.forEach((item, index) => {
+        const contact = importedContacts[index];
+        const contactTagsList = item.tags
+          .map(tagName => tagsMap[tagName])
+          .filter(tag => tag);
+        
+        if (contactTagsList.length > 0) {
+          newContactTags[contact.id] = contactTagsList;
+        }
+      });
+      setContactTags(newContactTags);
+
+    } catch (error) {
+      console.error('Error handling tags for imported contacts:', error);
+      alert('התוויות יובאו חלקית בלבד: ' + error.message);
+    }
+  };
+
+  const deleteAllContacts = async () => {
+    if (!window.confirm('האם אתה בטוח שברצונך למחוק את כל אנשי הקשר?\n\nפעולה זו תמחק את כל המידע ואינה ניתנת לביטול!')) {
+      return;
+    }
+    
+    // אישור נוסף עם הקלדת טקסט
+    const confirmText = prompt('כדי לאשר מחיקה, הקלד: מחק הכל');
+    if (confirmText !== 'מחק הכל') {
+      alert('המחיקה בוטלה - הטקסט לא תואם');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      if (contacts.length === 0) {
+        alert('אין אנשי קשר למחוק');
+        return;
+      }
+
+      const contactIds = contacts.map(contact => contact.id);
+      const chunkSize = 100; // מחיקה בחלקים של 100 כל פעם
+      let deletedCount = 0;
+      
+      // מחיקת תוויות בחלקים
+      for (let i = 0; i < contactIds.length; i += chunkSize) {
+        const chunk = contactIds.slice(i, i + chunkSize);
+        try {
+          const { error: tagsError } = await supabase
+            .from('contact_tags')
+            .delete()
+            .in('contact_id', chunk);
+          
+          if (tagsError) {
+            console.warn('Warning deleting contact tags chunk:', tagsError.message);
+          }
+        } catch (error) {
+          console.warn('Error deleting tags chunk:', error);
+        }
+      }
+      
+      // מחיקת אנשי קשר בחלקים
+      for (let i = 0; i < contactIds.length; i += chunkSize) {
+        const chunk = contactIds.slice(i, i + chunkSize);
+        try {
+          const { error: contactsError } = await supabase
+            .from('contacts')
+            .delete()
+            .in('id', chunk);
+          
+          if (contactsError) {
+            console.error('Error deleting contacts chunk:', contactsError);
+            // המשך למחוק את שאר הקבוצות גם אם יש שגיאה באחת מהן
+          } else {
+            deletedCount += chunk.length;
+          }
+          
+          // הצגת התקדמות
+          console.log(`נמחקו ${deletedCount} מתוך ${contactIds.length} אנשי קשר`);
+        } catch (error) {
+          console.error('Error deleting contacts chunk:', error);
+        }
+        
+        // הפסקה קצרה בין בקשות למניעת עומס על השרת
+        if (i + chunkSize < contactIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      // איפוס המצב המקומי
+      setContacts([]);
+      setContactTags({});
+      setSelectedContact(null);
+      setSelectedFilterTags([]);
+      setSelectedStatusFilter(null);
+      setActualSearchTerm('');
+      setColumnFilters([]);
+      
+      alert(`${deletedCount} אנשי קשר נמחקו בהצלחה`);
+    } catch (error) {
+      console.error('Delete all contacts error:', error);
+      alert('שגיאה במחיקה: ' + (error.message || 'שגיאה לא ידועה'));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const toggleTag = async (contactId, tagId) => {
+    const currentTags = contactTags[contactId] || [];
+    const hasTag = currentTags.some(t => t.id === tagId);
+    
+    try {
+      if (hasTag) {
+        // הסר תווית
+        const { error } = await supabase
+          .from('contact_tags')
+          .delete()
+          .eq('contact_id', contactId)
+          .eq('tag_id', tagId);
+          
+        if (error) throw error;
+        
+        setContactTags({
+          ...contactTags,
+          [contactId]: currentTags.filter(t => t.id !== tagId)
+        });
+      } else {
+        // הוסף תווית
+        const { error } = await supabase
+          .from('contact_tags')
+          .insert({ contact_id: contactId, tag_id: tagId });
+          
+        if (error) throw error;
+        
+        const tag = tags.find(t => t.id === tagId);
+        setContactTags({
+          ...contactTags,
+          [contactId]: [...currentTags, tag]
+        });
+      }
+    } catch (error) {
+      alert('שגיאה בעדכון תווית: ' + error.message);
+    }
+  };
+
+  const filteredContacts = contacts.filter(contact => {
+    // סינון לפי טקסט כללי - רק אם יש actualSearchTerm
+    const matchesSearch = !actualSearchTerm || 
+      `${contact.first_name} ${contact.last_name}`.toLowerCase().includes(actualSearchTerm.toLowerCase()) ||
+      contact.phone?.includes(actualSearchTerm) ||
+      contact.email?.toLowerCase().includes(actualSearchTerm.toLowerCase());
+    
+    // סינון לפי תוויות - תומך במספר תוויות
+    let matchesTags = true;
+    if (selectedFilterTags.length > 0) {
+      const contactTagIds = (contactTags[contact.id] || []).map(t => t.id);
+      if (tagFilterMode === 'and') {
+        // כל התוויות חייבות להיות
+        matchesTags = selectedFilterTags.every(tagId => contactTagIds.includes(tagId));
+      } else {
+        // לפחות תווית אחת
+        matchesTags = selectedFilterTags.some(tagId => contactTagIds.includes(tagId));
+      }
+    }
+    
+    // סינון לפי סטטוס פעילות
+    const matchesStatus = !selectedStatusFilter || contact.status === selectedStatusFilter;
+    
+    // סינון לפי עמודות מתקדם
+    const matchesColumnFilters = columnFilters.every(filter => {
+      if (!filter.column || !filter.value) return true;
+      
+      let cellValue;
+      // בדיקה אם זה שדה מותאם
+      if (filter.column.startsWith('custom_')) {
+        const fieldName = filter.column.replace('custom_', '');
+        cellValue = contact.custom_fields?.[fieldName];
+      } else {
+        cellValue = contact[filter.column];
+      }
+      
+      return checkFilterMatch(cellValue, filter);
+    });
+    
+return matchesSearch && matchesTags && matchesStatus && matchesColumnFilters;
+  });
+
+  // פונקציות עזר לרנדור שדות
+  const renderCustomFieldForm = (field, formData, handleCustomFieldChange) => {
+    const value = formData.custom_fields?.[field.field_name] || '';
+
+    if (field.field_type === 'select') {
+      return (
+        <select
+          value={value}
+          onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+          className="w-full border rounded-lg px-3 py-2"
+          required={field.is_required}
+        >
+          <option value="">{field.display_name}</option>
+          {field.options?.map(option => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.field_type === 'radio') {
+      return (
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            {field.display_name}
+            {field.is_required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          <div className="space-y-2">
+            {field.options?.map(option => (
+              <div key={option} className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id={`${field.field_name}_${option}`}
+                  name={field.field_name}
+                  value={option}
+                  checked={value === option}
+                  onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+                  required={field.is_required}
+                />
+                <label htmlFor={`${field.field_name}_${option}`} className="text-sm">
+                  {option}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (field.field_type === 'checkbox') {
+      return (
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={value || false}
+            onChange={(e) => handleCustomFieldChange(field.field_name, e.target.checked)}
+            className="rounded"
+            required={field.is_required}
+          />
+          <span>{field.display_name}</span>
+          {field.is_required && <span className="text-red-500">*</span>}
+        </label>
+      );
+    }
+
+    if (field.field_type === 'textarea') {
+      return (
+        <textarea
+          placeholder={field.display_name + (field.is_required ? ' *' : '')}
+          value={value}
+          onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+          className="w-full border rounded-lg px-3 py-2"
+          rows="3"
+          required={field.is_required}
+        />
+      );
+    }
+
+    // שדות רגילים (text, number, date)
+    return (
+      <input
+        type={field.field_type}
+        placeholder={field.display_name + (field.is_required ? ' *' : '')}
+        value={value}
+        onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+        className="w-full border rounded-lg px-3 py-2"
+        required={field.is_required}
+      />
+    );
+  };
+
+  const SettingsModal = () => {
+
+	
+	  // שמור את הטאב האחרון שנבחר
+  useEffect(() => {
+    if (!showSettings) {
+      // אל תאפס את הטאב כשסוגרים את ההגדרות
+      // כך כשפותחים שוב, זה יזכור איפה היינו
+    }
+  }, [showSettings]);
+
+    // ניהול שדות
+    const [customFields, setCustomFields] = useState([]);
+    const [builtInFields, setBuiltInFields] = useState([]);
+    const [newField, setNewField] = useState({
+      display_name: '',
+      field_type: 'text',
+      section: 'additional',
+      is_required: false,
+      options: []
+    });
+    const [newOption, setNewOption] = useState('');
+    const [editingField, setEditingField] = useState(null);
+    const [editingOptions, setEditingOptions] = useState([]);
+    const [newEditOption, setNewEditOption] = useState('');
+
+    // ניהול תוויות
+    const [newTagName, setNewTagName] = useState('');
+    const [newTagColor, setNewTagColor] = useState('#3B82F6');
+
+    useEffect(() => {
+  if (showSettings && settingsActiveTab === 'fields') {
+    fetchCustomFields();
+    fetchBuiltInFields();
+  }
+}, [showSettings, settingsActiveTab]);
+
+    const fetchCustomFields = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('custom_fields')
+          .select('*')
+          .order('display_order');
+
+        if (error) throw error;
+        setCustomFields(data || []);
+      } catch (error) {
+        console.error('Error fetching custom fields:', error);
+      }
+    };
+
+    const fetchBuiltInFields = async () => {
+      // שימוש בהגדרות הגלובליות
+      setBuiltInFields([...globalBuiltInFields]);
+    };
+
+    const toggleBuiltInField = async (fieldName) => {
+      updateGlobalBuiltInField(fieldName); // משתמש בפונקציה הגלובלית
+      const field = globalBuiltInFields.find(f => f.field_name === fieldName);
+      console.log(`שדה ${field?.display_name} ${!field?.is_active ? 'הופעל' : 'הושבת'}`);
+    };
+
+    const handleAddField = async (e) => {
+      e.preventDefault();
+      
+      if ((newField.field_type === 'select' || newField.field_type === 'radio') && newField.options.length === 0) {
+        alert('נא להוסיף לפחות אפשרות אחת לשדה זה');
+        return;
+      }
+
+      // יצירת שם שדה מהשם התצוגה
+      const fieldName = newField.display_name
+        .toLowerCase()
+        .replace(/[^\u0590-\u05FFa-z0-9]/g, '_')
+        .replace(/_+/g, '_');
+
+      try {
+        const { data, error } = await supabase
+          .from('custom_fields')
+          .insert([{
+            field_name: fieldName,
+            display_name: newField.display_name,
+            field_type: newField.field_type,
+            section: newField.section,
+            is_required: newField.is_required,
+            options: (newField.field_type === 'select' || newField.field_type === 'radio') ? newField.options : null,
+            display_order: customFields.length * 10,
+            is_active: true
+          }])
+          .select();
+
+        if (error) throw error;
+        
+        setCustomFields([...customFields, data[0]]);
+        setNewField({
+          display_name: '',
+          field_type: 'text',
+          section: 'additional',
+          is_required: false,
+          options: []
+        });
+        setNewOption('');
+        alert('השדה נוסף בהצלחה!');
+      } catch (error) {
+        alert('שגיאה בהוספת שדה: ' + error.message);
+      }
+    };
+
+    const startEditingField = (field) => {
+      setEditingField(field);
+      setEditingOptions(field.options ? [...field.options] : []);
+      setNewEditOption('');
+    };
+
+    const saveFieldEdit = async () => {
+      if (!editingField) return;
+
+      try {
+        const updatedField = {
+          ...editingField,
+          options: (editingField.field_type === 'select' || editingField.field_type === 'radio') 
+            ? editingOptions : null
+        };
+
+        const { error } = await supabase
+          .from('custom_fields')
+          .update(updatedField)
+          .eq('id', editingField.id);
+
+        if (error) throw error;
+        
+        setCustomFields(customFields.map(f => 
+          f.id === editingField.id ? updatedField : f
+        ));
+        setEditingField(null);
+        setEditingOptions([]);
+        alert('השדה עודכן בהצלחה!');
+      } catch (error) {
+        alert('שגיאה בעדכון שדה: ' + error.message);
+      }
+    };
+
+    const addEditOption = () => {
+      if (newEditOption.trim()) {
+        setEditingOptions([...editingOptions, newEditOption.trim()]);
+        setNewEditOption('');
+      }
+    };
+
+    const removeEditOption = (index) => {
+      setEditingOptions(editingOptions.filter((_, i) => i !== index));
+    };
+
+    const toggleFieldActive = async (field) => {
+      try {
+        const { error } = await supabase
+          .from('custom_fields')
+          .update({ is_active: !field.is_active })
+          .eq('id', field.id);
+
+        if (error) throw error;
+        
+        setCustomFields(customFields.map(f => 
+          f.id === field.id ? { ...f, is_active: !f.is_active } : f
+        ));
+      } catch (error) {
+        alert('שגיאה בעדכון שדה: ' + error.message);
+      }
+    };
+
+    const deleteField = async (fieldId) => {
+      if (!window.confirm('האם למחוק את השדה? הנתונים הקיימים יישמרו אך לא יוצגו.')) return;
+      
+      try {
+        const { error } = await supabase
+          .from('custom_fields')
+          .delete()
+          .eq('id', fieldId);
+
+        if (error) throw error;
+        
+        setCustomFields(customFields.filter(f => f.id !== fieldId));
+      } catch (error) {
+        alert('שגיאה במחיקת שדה: ' + error.message);
+      }
+    };
+
+    const addOption = () => {
+      if (newOption.trim()) {
+        setNewField({
+          ...newField,
+          options: [...newField.options, newOption.trim()]
+        });
+        setNewOption('');
+      }
+    };
+
+    const removeOption = (index) => {
+      setNewField({
+        ...newField,
+        options: newField.options.filter((_, i) => i !== index)
+      });
+    };
+
+    const handleAddTag = async (e) => {
+      e.preventDefault();
+      try {
+        const { data, error } = await supabase
+          .from('tags')
+          .insert([{ name: newTagName, color: newTagColor }])
+          .select();
+
+        if (error) throw error;
+        
+        setTags([...tags, data[0]]);
+        setNewTagName('');
+        alert('תווית נוספה בהצלחה!');
+      } catch (error) {
+        alert('שגיאה בהוספת תווית: ' + error.message);
+      }
+    };
+
+    const handleDeleteTag = async (tagId) => {
+      if (!window.confirm('האם למחוק את התווית? היא תוסר מכל אנשי הקשר.')) return;
+      
+      try {
+        const { error } = await supabase
+          .from('tags')
+          .delete()
+          .eq('id', tagId);
+
+        if (error) throw error;
+        
+        setTags(tags.filter(t => t.id !== tagId));
+        // עדכן גם את contactTags
+        const newContactTags = { ...contactTags };
+        Object.keys(newContactTags).forEach(contactId => {
+          newContactTags[contactId] = newContactTags[contactId].filter(t => t.id !== tagId);
+        });
+        setContactTags(newContactTags);
+      } catch (error) {
+        alert('שגיאה במחיקת תווית: ' + error.message);
+      }
+    };
+
+    // מחיקת סינון שמור מתווית
+    const deleteSavedFilter = async (tagId, filterId) => {
+      if (!window.confirm('האם למחוק את הסינון השמור?')) return;
+      
+      try {
+        const tag = tags.find(t => t.id === tagId);
+        const updatedFilters = (tag.saved_filters || []).filter(f => f.id !== filterId);
+        
+        const { error } = await supabase
+          .from('tags')
+          .update({ saved_filters: updatedFilters })
+          .eq('id', tagId);
+        
+        if (error) throw error;
+        
+        setTags(tags.map(t => 
+          t.id === tagId ? { ...t, saved_filters: updatedFilters } : t
+        ));
+        
+        loadSavedFilters();
+        alert('הסינון נמחק בהצלחה');
+      } catch (error) {
+        alert('שגיאה במחיקת סינון: ' + error.message);
+      }
+    };
+
+    if (!showSettings) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="bg-white rounded-lg p-6 w-full max-w-6xl my-8 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-2xl font-bold">הגדרות והעדפות</h3>
+            <button
+              onClick={() => setShowSettings(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* טאבים */}
+          <div className="flex gap-2 mb-6 border-b">
+            <button
+              onClick={() => setSettingsActiveTab('fields')}
+              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+                settingsActiveTab === 'fields'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Settings size={16} />
+              ניהול שדות
+            </button>
+            <button
+              onClick={() => setSettingsActiveTab('tags')}
+              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+                settingsActiveTab === 'tags'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Tag size={16} />
+              ניהול תוויות
+            </button>
+          </div>
+
+          {/* ניהול שדות */}
+          {settingsActiveTab === 'fields' && (
+            <div>
+              {/* טופס הוספת שדה חדש */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h4 className="font-semibold mb-3">הוסף שדה חדש</h4>
+                <form onSubmit={handleAddField} className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="שם השדה (לתצוגה)"
+                      value={newField.display_name}
+                      onChange={(e) => setNewField({...newField, display_name: e.target.value})}
+                      className="border rounded-lg px-3 py-2"
+                      required
+                    />
+                    <select
+                      value={newField.field_type}
+                      onChange={(e) => setNewField({...newField, field_type: e.target.value, options: []})}
+                      className="border rounded-lg px-3 py-2"
+                    >
+                      <option value="text">טקסט</option>
+                      <option value="number">מספר</option>
+                      <option value="date">תאריך</option>
+                      <option value="select">רשימה נפתחת</option>
+                      <option value="checkbox">תיבת סימון</option>
+                      <option value="textarea">טקסט ארוך</option>
+                      <option value="radio">כפתורי בחירה</option>
+                    </select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <select
+                      value={newField.section}
+                      onChange={(e) => setNewField({...newField, section: e.target.value})}
+                      className="border rounded-lg px-3 py-2"
+                    >
+                      <option value="basic">פרטים בסיסיים</option>
+                      <option value="address">כתובת</option>
+                      <option value="additional">פרטים נוספים</option>
+                      <option value="bank">פרטי בנק</option>
+                    </select>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={newField.is_required}
+                        onChange={(e) => setNewField({...newField, is_required: e.target.checked})}
+                        className="rounded"
+                      />
+                      <span>שדה חובה</span>
+                    </label>
+                  </div>
+
+                  {/* אפשרויות לשדה select או radio */}
+                  {(newField.field_type === 'select' || newField.field_type === 'radio') && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">אפשרויות לבחירה:</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="הוסף אפשרות"
+                          value={newOption}
+                          onChange={(e) => setNewOption(e.target.value)}
+                          className="flex-1 border rounded-lg px-3 py-2"
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addOption())}
+                        />
+                        <button
+                          type="button"
+                          onClick={addOption}
+                          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                        >
+                          הוסף
+                        </button>
+                      </div>
+                      {newField.options.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">
+                          {newField.options.map((option, index) => (
+                            <span
+                              key={index}
+                              className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1"
+                            >
+                              {option}
+                              <button
+                                type="button"
+                                onClick={() => removeOption(index)}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <X size={14} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                  >
+                    הוסף שדה
+                  </button>
+                </form>
+              </div>
+
+              {/* רשימת שדות קיימים */}
+              <div className="space-y-4">
+                <h4 className="font-semibold">שדות במערכת</h4>
+                
+                {/* שדות מובנים במערכת */}
+                <div>
+                  <h5 className="text-sm font-medium text-gray-600 mb-2">שדות מובנים במערכת</h5>
+                  <div className="space-y-2">
+                    {builtInFields.map(field => (
+                      <div key={field.field_name} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                        <div className="flex-1">
+                          <span className={`font-medium ${!field.is_active ? 'line-through text-gray-400' : ''}`}>
+                            {field.display_name}
+                          </span>
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded mr-2">
+                            {field.section === 'basic' ? 'בסיסי' :
+                             field.section === 'address' ? 'כתובת' :
+                             field.section === 'bank' ? 'בנק' :
+                             'נוסף'}
+                          </span>
+                          <span className="text-xs text-gray-500">(שדה מובנה)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleBuiltInField(field.field_name)}
+                            className={`px-3 py-1 rounded text-sm ${
+                              field.is_active 
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {field.is_active ? 'פעיל' : 'מושבת'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* שדות מותאמים */}
+                <div>
+                  <h5 className="text-sm font-medium text-gray-600 mb-2">שדות מותאמים אישית</h5>
+                  <div className="space-y-2">
+                    {customFields.map(field => (
+                      <div key={field.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <span className={`font-medium ${!field.is_active ? 'line-through text-gray-400' : ''}`}>
+                            {field.display_name}
+                          </span>
+                          <span className="text-sm text-gray-500 mr-2">
+                            ({field.field_type === 'text' ? 'טקסט' :
+                              field.field_type === 'number' ? 'מספר' :
+                              field.field_type === 'date' ? 'תאריך' :
+                              field.field_type === 'select' ? 'רשימה נפתחת' :
+                              field.field_type === 'checkbox' ? 'תיבת סימון' :
+                              field.field_type === 'radio' ? 'כפתורי בחירה' :
+                              'טקסט ארוך'})
+                          </span>
+                          {field.is_required && (
+                            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">חובה</span>
+                          )}
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded mr-1">
+                            {field.section === 'basic' ? 'בסיסי' :
+                             field.section === 'address' ? 'כתובת' :
+                             field.section === 'bank' ? 'בנק' :
+                             'נוסף'}
+                          </span>
+                          {(field.field_type === 'select' || field.field_type === 'radio') && field.options && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              אפשרויות: {field.options.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => startEditingField(field)}
+                            className="text-blue-500 hover:text-blue-700"
+                            title="ערוך שדה"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => toggleFieldActive(field)}
+                            className={`px-3 py-1 rounded text-sm ${
+                              field.is_active 
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {field.is_active ? 'פעיל' : 'מושבת'}
+                          </button>
+                          <button
+                            onClick={() => deleteField(field.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* חלון עריכת שדה */}
+              {editingField && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-60">
+                  <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="font-semibold">עריכת שדה: {editingField.display_name}</h4>
+                      <button
+                        onClick={() => setEditingField(null)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <input
+                        type="text"
+                        value={editingField.display_name}
+                        onChange={(e) => setEditingField({...editingField, display_name: e.target.value})}
+                        className="w-full border rounded-lg px-3 py-2"
+                        placeholder="שם השדה"
+                      />
+
+                      <select
+                        value={editingField.section}
+                        onChange={(e) => setEditingField({...editingField, section: e.target.value})}
+                        className="w-full border rounded-lg px-3 py-2"
+                      >
+                        <option value="basic">פרטים בסיסיים</option>
+                        <option value="address">כתובת</option>
+                        <option value="additional">פרטים נוספים</option>
+                        <option value="bank">פרטי בנק</option>
+                      </select>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editingField.is_required}
+                          onChange={(e) => setEditingField({...editingField, is_required: e.target.checked})}
+                          className="rounded"
+                        />
+                        <span>שדה חובה</span>
+                      </label>
+
+                      {/* עריכת אפשרויות לשדה select או radio */}
+                      {(editingField.field_type === 'select' || editingField.field_type === 'radio') && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700">אפשרויות לבחירה:</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="הוסף אפשרות"
+                              value={newEditOption}
+                              onChange={(e) => setNewEditOption(e.target.value)}
+                              className="flex-1 border rounded-lg px-3 py-2"
+                              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addEditOption())}
+                            />
+                            <button
+                              type="button"
+                              onClick={addEditOption}
+                              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                            >
+                              הוסף
+                            </button>
+                          </div>
+                          {editingOptions.length > 0 && (
+                            <div className="flex flex-wrap gap-2 p-2 bg-white border rounded">
+                              {editingOptions.map((option, index) => (
+                                <span
+                                  key={index}
+                                  className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1"
+                                >
+                                  {option}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeEditOption(index)}
+                                    className="text-blue-600 hover:text-blue-800"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 justify-end pt-4">
+                        <button
+                          onClick={() => setEditingField(null)}
+                          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                        >
+                          ביטול
+                        </button>
+                        <button
+                          onClick={saveFieldEdit}
+                          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                        >
+                          שמור שינויים
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ניהול תוויות */}
+          {settingsActiveTab === 'tags' && (
+            <div>
+              <form onSubmit={handleAddTag} className="mb-6 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="שם התווית"
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  className="flex-1 border rounded-lg px-3 py-2"
+                  required
+                />
+                <input
+                  type="color"
+                  value={newTagColor}
+                  onChange={(e) => setNewTagColor(e.target.value)}
+                  className="w-12 h-10 border rounded cursor-pointer"
+                />
+                <button
+                  type="submit"
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                >
+                  הוסף תווית
+                </button>
+              </form>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">תוויות קיימות</h4>
+                {tags.map(tag => (
+                  <div key={tag.id} className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="px-3 py-1 rounded-full text-sm text-white"
+                        style={{ backgroundColor: tag.color }}
+                      >
+                        {tag.name}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteTag(tag.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    
+                    {/* הצגת סינונים שמורים בתווית */}
+                    {tag.saved_filters && tag.saved_filters.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm font-medium text-gray-600 mb-2">סינון מהיר שמור:</p>
+                        <div className="space-y-1">
+                          {tag.saved_filters.map(filter => (
+                            <div key={filter.id} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
+                              <span className="flex items-center gap-1">
+                                <Bookmark size={14} className="text-gray-500" />
+                                סינון פעיל
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    // טוען את הסינון
+                                    loadSavedFilter(filter);
+                                    // סוגר את ההגדרות
+                                    setShowSettings(false);
+                                  }}
+                                  className="text-blue-500 hover:text-blue-700"
+                                  title="הפעל סינון"
+                                >
+                                  <Activity size={14} />
+                                </button>
+                                <button
+                                  onClick={() => deleteSavedFilter(tag.id, filter.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                  title="מחק סינון"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+const ContactsList = () => {
+    const [contactsMetadata, setContactsMetadata] = useState({});
+    const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
+    
+    // חישוב filteredContacts מקומי - הסרת הכפילות
+    const localFilteredContacts = contacts.filter(contact => {
+      const matchesSearch = !actualSearchTerm || 
+        `${contact.first_name} ${contact.last_name}`.toLowerCase().includes(actualSearchTerm.toLowerCase()) ||
+        contact.phone?.includes(actualSearchTerm) ||
+        contact.email?.toLowerCase().includes(actualSearchTerm.toLowerCase());
+      
+      let matchesTags = true;
+      if (selectedFilterTags.length > 0) {
+        const contactTagIds = (contactTags[contact.id] || []).map(t => t.id);
+        if (tagFilterMode === 'and') {
+          matchesTags = selectedFilterTags.every(tagId => contactTagIds.includes(tagId));
+        } else {
+          matchesTags = selectedFilterTags.some(tagId => contactTagIds.includes(tagId));
+        }
+      }
+      
+      const matchesStatus = !selectedStatusFilter || contact.status === selectedStatusFilter;
+      
+      const matchesColumnFilters = columnFilters.every(filter => {
+        if (!filter.column || !filter.value) return true;
+        
+        let cellValue;
+        if (filter.column.startsWith('custom_')) {
+          const fieldName = filter.column.replace('custom_', '');
+          cellValue = contact.custom_fields?.[fieldName];
+        } else {
+          cellValue = contact[filter.column];
+        }
+        
+        return checkFilterMatch(cellValue, filter);
+      });
+      
+      return matchesSearch && matchesTags && matchesStatus && matchesColumnFilters;
+    });
+    
+    // useEffect מתוקן עם dependencies נכונות
+    useEffect(() => {
+      console.log("🔄 useEffect רץ! contacts:", contacts.length);
+      if (contacts.length > 0) {
+        fetchContactsMetadata();
+      }
+    }, [contacts, actualSearchTerm, selectedFilterTags, tagFilterMode, selectedStatusFilter, columnFilters]);
+
+    const fetchContactsMetadata = async () => {
+      console.log(">>> fetchContactsMetadata נקראת!");
+      setIsLoadingMetadata(true);
+      
+      try {
+        // שימוש בכל אנשי הקשר, לא רק המסוננים
+        const contactIds = contacts.map(c => c.id);
+        console.log(">>> מספר אנשי קשר לבדוק:", contactIds.length);
+        if (contactIds.length === 0) {
+          setContactsMetadata({});
+          return;
+        }
+        
+        // טעינת נתונים בחלקים למניעת בעיות עם רשימות גדולות
+        const chunkSize = 100;
+        const metadata = {};
+        
+        for (let i = 0; i < contactIds.length; i += chunkSize) {
+          const chunk = contactIds.slice(i, i + chunkSize);
+          
+          // טעינת נתונים לחלק הנוכחי
+          const [remindersResult, interactionsResult] = await Promise.all([
+            supabase
+              .from('reminders')
+              .select('contact_id, id, reminder_date')
+              .in('contact_id', chunk)
+              .eq('is_completed', false)
+              .gte('reminder_date', new Date().toISOString()),
+              
+            supabase
+              .from('contact_interactions')
+              .select('contact_id, interaction_date, follow_up_needed')
+              .in('contact_id', chunk)
+              .order('interaction_date', { ascending: false })
+          ]);
+          
+          console.log(`חלק ${i/chunkSize + 1}: תזכורות:`, remindersResult.data?.length || 0, "שיחות:", interactionsResult.data?.length || 0);
+          
+          // עיבוד תזכורות
+          if (remindersResult.data) {
+            remindersResult.data.forEach(reminder => {
+              if (!metadata[reminder.contact_id]) {
+                metadata[reminder.contact_id] = { remindersCount: 0, lastInteraction: null, followUpNeeded: false };
+              }
+              metadata[reminder.contact_id].remindersCount++;
+            });
+          }
+          
+          // עיבוד שיחות - רק האחרונה לכל איש קשר
+          if (interactionsResult.data) {
+            const latestInteractions = {};
+            interactionsResult.data.forEach(interaction => {
+              if (!latestInteractions[interaction.contact_id] || 
+                  new Date(interaction.interaction_date) > new Date(latestInteractions[interaction.contact_id].interaction_date)) {
+                latestInteractions[interaction.contact_id] = interaction;
+              }
+            });
+            
+            Object.entries(latestInteractions).forEach(([contactId, interaction]) => {
+              if (!metadata[contactId]) {
+                metadata[contactId] = { remindersCount: 0, lastInteraction: null, followUpNeeded: false };
+              }
+              metadata[contactId].lastInteraction = interaction.interaction_date;
+              metadata[contactId].followUpNeeded = interaction.follow_up_needed || false;
+            });
+          }
+        }
+        
+        console.log("Metadata הסופי:", Object.keys(metadata).length, "אנשי קשר עם נתונים");
+        setContactsMetadata(metadata);
+      } catch (error) {
+        console.error('Error fetching contacts metadata:', error);
+      } finally {
+        setIsLoadingMetadata(false);
+      }
+    };
+
+    const getContactIndicators = (contact) => {
+      const meta = contactsMetadata[contact.id] || {};
+      const indicators = [];
+
+      // תזכורות
+      if (meta.remindersCount > 0) {
+        indicators.push({
+          icon: Bell,
+          color: 'text-yellow-500',
+          bgColor: 'bg-yellow-50',
+          tooltip: `${meta.remindersCount} תזכורות פעילות`,
+          count: meta.remindersCount
+        });
+      }
+      
+      // מעקב נדרש
+      if (meta.followUpNeeded) {
+        indicators.push({
+          icon: AlertCircle,
+          color: 'text-red-500',
+          bgColor: 'bg-red-50',
+          tooltip: 'נדרש מעקב'
+        });
+      }
+      
+      // זמן מאז שיחה אחרונה
+      if (meta.lastInteraction) {
+        const daysSinceContact = Math.floor((new Date() - new Date(meta.lastInteraction)) / (1000 * 60 * 60 * 24));
+        if (daysSinceContact > 30) {
+          indicators.push({
+            icon: Clock,
+            color: 'text-gray-500',
+            bgColor: 'bg-gray-50',
+            tooltip: `לא היה קשר ${daysSinceContact} ימים`
+          });
+        }
+      }
+      
+      // יום הולדת השבוע
+      if (contact.birth_date) {
+        const birthDate = new Date(contact.birth_date);
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const birthdayThisYear = new Date(currentYear, birthDate.getMonth(), birthDate.getDate());
+        let daysToBirthday = Math.floor((birthdayThisYear - today) / (1000 * 60 * 60 * 24));
+        
+        // אם יום ההולדת כבר עבר השנה, חשב לשנה הבאה
+        if (daysToBirthday < 0) {
+          const birthdayNextYear = new Date(currentYear + 1, birthDate.getMonth(), birthDate.getDate());
+          daysToBirthday = Math.floor((birthdayNextYear - today) / (1000 * 60 * 60 * 24));
+        }
+        
+        if (daysToBirthday >= 0 && daysToBirthday <= 7) {
+          indicators.push({
+            icon: Calendar,
+            color: 'text-pink-500',
+            bgColor: 'bg-pink-50',
+            tooltip: daysToBirthday === 0 ? 'יום הולדת היום!' : `יום הולדת בעוד ${daysToBirthday} ימים`
+          });
+        }
+      }
+      
+      return indicators;
+    };
+
+    return (
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-4 border-b">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">אנשי קשר ({filteredContacts.length})</h2>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="bg-indigo-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-600"
+              >
+                <Settings size={20} />
+                הגדרות
+              </button>
+              <button
+                onClick={downloadSampleCSV}
+                className="bg-gray-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-600"
+                title="הורד קובץ דוגמה עם כל השדות (כולל שדות מותאמים ומושבתים). עמודת התוויות: הפרד בין תוויות עם נקודותיים (:) לדוגמה: תורם:VIP:חשוב"
+              >
+                <Download size={20} />
+                דוגמה
+              </button>
+              <label className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-600 cursor-pointer">
+                <Upload size={20} />
+                ייבוא CSV
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileImport}
+                  className="hidden"
+                />
+              </label>
+              <button 
+                onClick={() => setShowAddForm(true)}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-600"
+              >
+                <Plus size={20} />
+                הוסף איש קשר
+              </button>
+              {contacts.length > 0 && (
+                <button
+                  onClick={deleteAllContacts}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700"
+                  title="מחק את כל אנשי הקשר"
+                >
+                  <Trash2 size={20} />
+                  מחק הכל
+                </button>
+              )}
+            </div>
+          </div>
+          
+          <SearchAndFilterSection 
+            onSearch={handleSearch}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            hasActiveFilters={hasActiveFilters}
+            clearAllFilters={clearAllFilters}
+            tags={tags}
+            contacts={contacts}
+            contactTags={contactTags}
+            selectedFilterTags={selectedFilterTags}
+            setSelectedFilterTags={setSelectedFilterTags}
+            tagFilterMode={tagFilterMode}
+            setTagFilterMode={setTagFilterMode}
+            selectedStatusFilter={selectedStatusFilter}
+            setSelectedStatusFilter={setSelectedStatusFilter}
+            columnFilters={columnFilters}
+            addColumnFilter={addColumnFilter}
+            updateColumnFilter={updateColumnFilter}
+            removeColumnFilter={removeColumnFilter}
+            availableColumns={availableColumns}
+            getFilterTypes={getFilterTypes}
+            saveFilterAsTag={saveFilterAsTag}
+            loadSavedFilter={loadSavedFilter}
+            savedFilters={savedFilters}
+            actualSearchTerm={actualSearchTerm}
+          />
+          <ActiveFiltersDisplay 
+            hasActiveFilters={hasActiveFilters}
+            actualSearchTerm={actualSearchTerm}
+            clearSearchTerm={clearSearchTerm}
+            selectedFilterTags={selectedFilterTags}
+            setSelectedFilterTags={setSelectedFilterTags}
+            tagFilterMode={tagFilterMode}
+            tags={tags}
+            selectedStatusFilter={selectedStatusFilter}
+            setSelectedStatusFilter={setSelectedStatusFilter}
+            columnFilters={columnFilters}
+            removeColumnFilter={removeColumnFilter}
+            availableColumns={availableColumns}
+            getFilterTypes={getFilterTypes}
+          />
+        </div>
+        
+        <div className="overflow-y-auto max-h-96">
+          <div className="divide-y">
+            {filteredContacts.length === 0 ? (
+  <div className="p-8 text-center text-gray-500">
+    לא נמצאו אנשי קשר
+  </div>
+) : (
+  filteredContacts.map(contact => {
+                const indicators = getContactIndicators(contact);
+console.log(`${contact.first_name} ${contact.last_name} - מספר אינדיקטורים:`, indicators.length);
+                const hasImportantInfo = indicators.length > 0;
+                
+                return (
+                  <div
+                    key={contact.id}
+                    className={`p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors ${
+                      hasImportantInfo ? 'border-r-4 border-yellow-400' : ''
+                    }`}
+                    onClick={() => setSelectedContact(contact)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <h3 className="font-semibold">{contact.first_name} {contact.last_name}</h3>
+                          <p className="text-sm text-gray-600">{contact.phone}</p>
+                        </div>
+                        
+                        {/* אינדיקטורים חשובים */}
+                        {indicators.length > 0 && (
+                          <div className="flex gap-2">
+                            {indicators.map((indicator, index) => {
+                              const Icon = indicator.icon;
+                              return (
+                                <div
+                                  key={index}
+                                  className={`relative group ${indicator.bgColor} ${indicator.color} p-1.5 rounded-full`}
+                                  title={indicator.tooltip}
+                                >
+                                  <Icon size={14} />
+                                  {indicator.count && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                      {indicator.count}
+                                    </span>
+                                  )}
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                    {indicator.tooltip}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2 mt-1 flex-wrap items-center">
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          contact.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {contact.status === 'active' ? 'פעיל' : 'לא פעיל'}
+                        </span>
+                        {contactTags[contact.id]?.map(tag => (
+                          <span
+                            key={tag.id}
+                            className="text-xs px-2 py-1 rounded text-white"
+                            style={{ backgroundColor: tag.color }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                        
+                        {/* מידע נוסף */}
+                        {contact.city && (
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <MapPin size={12} />
+                            {contact.city}
+                          </span>
+                        )}
+                        {contact.email && (
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Mail size={12} />
+                            {contact.email}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="text-gray-400 flex-shrink-0" size={20} />
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCustomField = (field, formData, editMode, handleCustomFieldChange) => {
+    const value = formData.custom_fields?.[field.field_name] || '';
+
+    if (field.field_type === 'select') {
+      return editMode ? (
+        <select
+          value={value}
+          onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+          className="border rounded px-2 py-1 flex-1"
+        >
+          <option value="">בחר {field.display_name}</option>
+          {field.options?.map(option => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      ) : (
+        <span>{value || '-'}</span>
+      );
+    }
+
+    if (field.field_type === 'radio') {
+      return editMode ? (
+        <div className="flex gap-4">
+          {field.options?.map(option => (
+            <label key={option} className="flex items-center gap-1">
+              <input
+                type="radio"
+                name={field.field_name}
+                value={option}
+                checked={value === option}
+                onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+                className="rounded"
+              />
+              <span className="text-sm">{option}</span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <span>{value || '-'}</span>
+      );
+    }
+
+    if (field.field_type === 'checkbox') {
+      return editMode ? (
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={value || false}
+            onChange={(e) => handleCustomFieldChange(field.field_name, e.target.checked)}
+            className="rounded"
+          />
+          <span>{field.display_name}</span>
+        </label>
+      ) : (
+        <span>{value ? 'כן' : 'לא'}</span>
+      );
+    }
+
+    if (field.field_type === 'textarea') {
+      return editMode ? (
+        <textarea
+          value={value}
+          onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+          className="border rounded px-2 py-1 flex-1"
+          rows="2"
+        />
+      ) : (
+        <span>{value || '-'}</span>
+      );
+    }
+
+    // שדות רגילים (text, number, date)
+    return editMode ? (
+      <input
+        type={field.field_type}
+        value={value}
+        onChange={(e) => handleCustomFieldChange(field.field_name, e.target.value)}
+        className="border rounded px-2 py-1 flex-1"
+      />
+    ) : (
+      <span>{field.field_type === 'date' && value ? new Date(value).toLocaleDateString('he-IL') : (value || '-')}</span>
+    );
+  };
+
+  const renderBuiltInField = (fieldName, fieldLabel, fieldType, icon, formData, editMode, setFormData, builtInFieldsToUse) => {
+    // בדיקה אם השדה פעיל
+    const fieldSetting = builtInFieldsToUse?.find(f => f.field_name === fieldName);
+    if (fieldSetting && !fieldSetting.is_active) {
+      return null; // לא להציג שדה שמושבת
+    }
+
+    const value = formData[fieldName] || '';
+
+    return (
+      <div className="flex justify-between" key={fieldName}>
+        <span className="text-gray-600 flex items-center gap-1">
+          {icon && React.createElement(icon, { size: 14 })}
+          {fieldLabel}:
+        </span>
+        {editMode ? (
+          <input
+            type={fieldType}
+            value={value}
+            onChange={(e) => setFormData({...formData, [fieldName]: fieldType === 'number' ? parseInt(e.target.value) || 0 : e.target.value})}
+            className="border rounded px-2 py-1 w-32"
+            placeholder={fieldLabel}
+            min={fieldType === 'number' ? '0' : undefined}
+          />
+        ) : (
+          <span>
+            {fieldType === 'date' && value ? new Date(value).toLocaleDateString('he-IL') : 
+             fieldType === 'number' && fieldName === 'children_count' ? (value || 0) :
+             (value || '-')}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+const ContactDetails = () => {
+  const [formData, setFormData] = useState(selectedContact);
+  const [customFields, setCustomFields] = useState([]);
+  const [activeTab, setActiveTab] = useState('details');
+  const [interactions, setInteractions] = useState([]);
+  const [reminders, setReminders] = useState([]);
+  const [showAddInteraction, setShowAddInteraction] = useState(false);
+  const [showAddReminder, setShowAddReminder] = useState(false);
+  const [newInteraction, setNewInteraction] = useState({
+    interaction_type: 'phone',
+    content: '',
+    conclusions: '',
+    follow_up_needed: false,
+    status: 'completed',
+    parent_interaction_id: null  // הוסף את זה
+  });
+  const [newReminder, setNewReminder] = useState({
+    reminder_date: '',
+    reminder_type: 'follow_up',
+    title: '',
+    description: ''
+  });
+  const [editingInteraction, setEditingInteraction] = useState(null);  // חדש
+  const [editingReminder, setEditingReminder] = useState(null);  // חדש
+
+  useEffect(() => {
+    fetchCustomFields();
+    fetchInteractions();
+    fetchReminders();
+  }, [selectedContact.id]);
+
+  const fetchCustomFields = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('custom_fields')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order');
+
+      if (error) throw error;
+      setCustomFields(data || []);
+    } catch (error) {
+      console.error('Error fetching custom fields:', error);
+    }
+  };
+
+  const fetchInteractions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contact_interactions')
+        .select('*')
+        .eq('contact_id', selectedContact.id)
+        .order('interaction_date', { ascending: false });
+
+      if (error) throw error;
+      setInteractions(data || []);
+    } catch (error) {
+      console.error('Error fetching interactions:', error);
+    }
+  };
+
+  const fetchReminders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*')
+        .eq('contact_id', selectedContact.id)
+        .order('reminder_date', { ascending: true });
+
+      if (error) throw error;
+      setReminders(data || []);
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+    }
+  };
+
+const handleAddInteraction = async () => {
+  try {
+    const interactionData = {
+      contact_id: selectedContact.id,
+      ...newInteraction,
+      interaction_date: new Date()
+    };
+
+    // אם זה המשך שיחה, הוסף את ה-parent_interaction_id
+    if (newInteraction.parent_interaction_id) {
+      interactionData.parent_interaction_id = newInteraction.parent_interaction_id;
+    }
+
+    const { data, error } = await supabase
+      .from('contact_interactions')
+      .insert([interactionData])
+      .select();
+
+    if (error) throw error;
+    
+    setInteractions([data[0], ...interactions]);
+    setShowAddInteraction(false);
+    setNewInteraction({
+      interaction_type: 'phone',
+      content: '',
+      conclusions: '',
+      follow_up_needed: false,
+      status: 'completed',
+      parent_interaction_id: null
+    });
+    alert('השיחה תועדה בהצלחה!');
+  } catch (error) {
+    alert('שגיאה בשמירת השיחה: ' + error.message);
+  }
+};
+const handleUpdateInteraction = async () => {
+  if (!editingInteraction) return;
+  
+  try {
+    const { error } = await supabase
+      .from('contact_interactions')
+      .update({
+        interaction_type: editingInteraction.interaction_type,
+        content: editingInteraction.content,
+        conclusions: editingInteraction.conclusions,
+        follow_up_needed: editingInteraction.follow_up_needed,
+        status: editingInteraction.status
+      })
+      .eq('id', editingInteraction.id);
+
+    if (error) throw error;
+    
+    setInteractions(interactions.map(i => 
+      i.id === editingInteraction.id ? editingInteraction : i
+    ));
+    setEditingInteraction(null);
+    alert('השיחה עודכנה בהצלחה!');
+  } catch (error) {
+    alert('שגיאה בעדכון השיחה: ' + error.message);
+  }
+};
+
+const startContinueInteraction = (parentInteraction) => {
+  setNewInteraction({
+    interaction_type: 'phone',
+    content: `המשך לשיחה מתאריך ${new Date(parentInteraction.interaction_date).toLocaleDateString('he-IL')}`,
+    conclusions: '',
+    follow_up_needed: false,
+    status: 'completed',
+    parent_interaction_id: parentInteraction.id
+  });
+  setShowAddInteraction(true);
+};
+  const handleAddReminder = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reminders')
+        .insert([{
+          contact_id: selectedContact.id,
+          ...newReminder
+        }])
+        .select();
+
+      if (error) throw error;
+      
+      setReminders([...reminders, data[0]]);
+      setShowAddReminder(false);
+      setNewReminder({
+        reminder_date: '',
+        reminder_type: 'follow_up',
+        title: '',
+        description: ''
+      });
+      alert('התזכורת נוספה בהצלחה!');
+    } catch (error) {
+      alert('שגיאה בהוספת תזכורת: ' + error.message);
+    }
+  };
+const handleUpdateReminder = async () => {
+  if (!editingReminder) return;
+  
+  try {
+    const { error } = await supabase
+      .from('reminders')
+      .update({
+        reminder_date: editingReminder.reminder_date,
+        reminder_type: editingReminder.reminder_type,
+        title: editingReminder.title,
+        description: editingReminder.description
+      })
+      .eq('id', editingReminder.id);
+
+    if (error) throw error;
+    
+    setReminders(reminders.map(r => 
+      r.id === editingReminder.id ? editingReminder : r
+    ));
+    setEditingReminder(null);
+    alert('התזכורת עודכנה בהצלחה!');
+  } catch (error) {
+    alert('שגיאה בעדכון התזכורת: ' + error.message);
+  }
+};
+  const toggleReminderComplete = async (reminderId, currentStatus) => {
+    try {
+      const { error } = await supabase
+        .from('reminders')
+        .update({ is_completed: !currentStatus })
+        .eq('id', reminderId);
+
+      if (error) throw error;
+      
+      setReminders(reminders.map(r => 
+        r.id === reminderId ? { ...r, is_completed: !currentStatus } : r
+      ));
+    } catch (error) {
+      alert('שגיאה בעדכון תזכורת: ' + error.message);
+    }
+  };
+
+  const deleteInteraction = async (interactionId) => {
+    if (!window.confirm('האם למחוק את השיחה?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('contact_interactions')
+        .delete()
+        .eq('id', interactionId);
+
+      if (error) throw error;
+      
+      setInteractions(interactions.filter(i => i.id !== interactionId));
+      alert('השיחה נמחקה בהצלחה');
+    } catch (error) {
+      alert('שגיאה במחיקת השיחה: ' + error.message);
+    }
+  };
+
+  const deleteReminder = async (reminderId) => {
+    if (!window.confirm('האם למחוק את התזכורת?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('reminders')
+        .delete()
+        .eq('id', reminderId);
+
+      if (error) throw error;
+      
+      setReminders(reminders.filter(r => r.id !== reminderId));
+      alert('התזכורת נמחקה בהצלחה');
+    } catch (error) {
+      alert('שגיאה במחיקת התזכורת: ' + error.message);
+    }
+  };
+  // מחיקת כל השיחות של איש הקשר
+  const deleteAllInteractions = async () => {
+    if (interactions.length === 0) {
+      alert('אין שיחות למחוק');
+      return;
+    }
+    
+    if (!window.confirm(`האם אתה בטוח שברצונך למחוק את כל ${interactions.length} השיחות?\n\nפעולה זו אינה ניתנת לביטול!`)) {
+      return;
+    }
+    
+    const confirmText = prompt('כדי לאשר מחיקה, הקלד: מחק הכל');
+    if (confirmText !== 'מחק הכל') {
+      alert('המחיקה בוטלה - הטקסט לא תואם');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('contact_interactions')
+        .delete()
+        .eq('contact_id', selectedContact.id);
+
+      if (error) throw error;
+      
+      setInteractions([]);
+      alert(`${interactions.length} שיחות נמחקו בהצלחה`);
+    } catch (error) {
+      alert('שגיאה במחיקת השיחות: ' + error.message);
+    }
+  };
+
+  // מחיקת כל התזכורות של איש הקשר
+  const deleteAllReminders = async () => {
+    if (reminders.length === 0) {
+      alert('אין תזכורות למחוק');
+      return;
+    }
+    
+    if (!window.confirm(`האם אתה בטוח שברצונך למחוק את כל ${reminders.length} התזכורות?\n\nפעולה זו אינה ניתנת לביטול!`)) {
+      return;
+    }
+    
+    const confirmText = prompt('כדי לאשר מחיקה, הקלד: מחק הכל');
+    if (confirmText !== 'מחק הכל') {
+      alert('המחיקה בוטלה - הטקסט לא תואם');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('reminders')
+        .delete()
+        .eq('contact_id', selectedContact.id);
+
+      if (error) throw error;
+      
+      setReminders([]);
+      alert(`${reminders.length} תזכורות נמחקו בהצלחה`);
+    } catch (error) {
+      alert('שגיאה במחיקת התזכורות: ' + error.message);
+    }
+  };
+  const handleSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .update({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          status: formData.status,
+          phone: formData.phone,
+          email: formData.email,
+          street: formData.street,
+          house_number: formData.house_number,
+          city: formData.city,
+          zip_code: formData.zip_code,
+          id_number: formData.id_number,
+          birth_date: formData.birth_date,
+          occupation: formData.occupation,
+          spouse_name: formData.spouse_name,
+          children_count: formData.children_count,
+          bank_name: formData.bank_name,
+          bank_branch: formData.bank_branch,
+          bank_account: formData.bank_account,
+          notes: formData.notes,
+          custom_fields: formData.custom_fields
+        })
+        .eq('id', formData.id);
+
+      if (error) throw error;
+      
+      setContacts(contacts.map(c => c.id === formData.id ? formData : c));
+      setSelectedContact(formData);
+      setEditMode(false);
+      alert('הפרטים נשמרו בהצלחה!');
+    } catch (error) {
+      alert('שגיאה בשמירה: ' + error.message);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`האם אתה בטוח שברצונך למחוק את ${formData.first_name} ${formData.last_name}?\n\nפעולה זו אינה ניתנת לביטול!`)) {
+      return;
+    }
+    
+    try {
+      // מחיקת תוויות של איש הקשר
+      await supabase
+        .from('contact_tags')
+        .delete()
+        .eq('contact_id', formData.id);
+
+      // מחיקת איש הקשר
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', formData.id);
+
+      if (error) throw error;
+      
+      // עדכון המצב המקומי
+      setContacts(contacts.filter(c => c.id !== formData.id));
+      
+      // הסרת תוויות מהמצב המקומי
+      const newContactTags = { ...contactTags };
+      delete newContactTags[formData.id];
+      setContactTags(newContactTags);
+      
+      // חזרה לרשימה
+      setSelectedContact(null);
+      alert('איש הקשר נמחק בהצלחה');
+    } catch (error) {
+      alert('שגיאה במחיקה: ' + error.message);
+    }
+  };
+
+  const handleCustomFieldChange = (fieldName, value) => {
+    setFormData({
+      ...formData,
+      custom_fields: {
+        ...formData.custom_fields,
+        [fieldName]: value
+      }
+    });
+  };
+
+  const currentContactTags = contactTags[selectedContact.id] || [];
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">
+          {formData.first_name} {formData.last_name}
+        </h2>
+        <div className="flex gap-2">
+          {activeTab === 'details' && (
+            editMode ? (
+              <>
+                <button
+                  onClick={handleSave}
+                  className="bg-green-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-600"
+                >
+                  <Save size={20} />
+                  שמור
+                </button>
+                <button
+                  onClick={() => {
+                    setFormData(selectedContact);
+                    setEditMode(false);
+                  }}
+                  className="bg-gray-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-600"
+                >
+                  <X size={20} />
+                  ביטול
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-600"
+                >
+                  <Edit size={20} />
+                  ערוך
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-600"
+                  title="מחק איש קשר"
+                >
+                  <Trash2 size={20} />
+                  מחק
+                </button>
+              </>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* טאבים */}
+      <div className="flex gap-2 mb-6 border-b">
+        <button
+          onClick={() => setActiveTab('details')}
+          className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'details'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          <User size={16} />
+          פרטים אישיים
+        </button>
+        <button
+          onClick={() => setActiveTab('interactions')}
+          className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'interactions'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          <MessageSquare size={16} />
+          היסטוריית שיחות ({interactions.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('reminders')}
+          className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+            activeTab === 'reminders'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          <Bell size={16} />
+          תזכורות ({reminders.filter(r => !r.is_completed).length})
+        </button>
+      </div>
+
+{/* תוכן הטאבים */}
+     {activeTab === 'details' && (
+       <div>
+         <div className="mb-4">
+           <h3 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+             <Tag size={16} />
+             תוויות
+           </h3>
+           <div className="flex flex-wrap gap-2">
+             {tags.map(tag => {
+               const hasTag = currentContactTags.some(t => t.id === tag.id);
+               return (
+                 <button
+                   key={tag.id}
+                   onClick={() => toggleTag(selectedContact.id, tag.id)}
+                   className={`px-3 py-1 rounded-full text-sm transition-all ${
+                     hasTag
+                       ? 'text-white shadow-md'
+                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                   }`}
+                   style={hasTag ? { backgroundColor: tag.color } : {}}
+                 >
+                   {tag.name}
+                 </button>
+               );
+             })}
+           </div>
+         </div>
+
+         <div className="grid grid-cols-2 gap-6">
+           <div>
+             <h3 className="font-semibold text-gray-700 mb-2">פרטים אישיים</h3>
+             <div className="space-y-3">
+               {/* שדות סטטוס - רק מצב פעילות */}
+               <div className="p-3 bg-gray-50 rounded-lg">
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">מצב פעילות</label>
+                   {editMode ? (
+                     <select
+                       value={formData.status || 'active'}
+                       onChange={(e) => setFormData({...formData, status: e.target.value})}
+                       className="w-full border rounded-lg px-3 py-2"
+                     >
+                       <option value="active">פעיל</option>
+                       <option value="inactive">לא פעיל</option>
+                     </select>
+                   ) : (
+                     <span className={`inline-block px-3 py-1 rounded text-sm ${
+                       formData.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                     }`}>
+                       {formData.status === 'active' ? 'פעיל' : 'לא פעיל'}
+                     </span>
+                   )}
+                 </div>
+               </div>
+
+               {/* פרטים בסיסיים */}
+               {globalBuiltInFields.filter(f => f.section === 'basic' && f.is_active).map(field => (
+                 <div key={field.field_name} className="flex items-center gap-2">
+                   {field.field_name === 'phone' && <Phone size={16} className="text-gray-400" />}
+                   {field.field_name === 'email' && <Mail size={16} className="text-gray-400" />}
+                   {editMode ? (
+                     <input
+                       type={field.field_name === 'email' ? 'email' : 'text'}
+                       value={formData[field.field_name] || ''}
+                       onChange={(e) => setFormData({...formData, [field.field_name]: e.target.value})}
+                       className="border rounded px-2 py-1 w-full"
+                       placeholder={field.display_name}
+                     />
+                   ) : (
+                     <span>{formData[field.field_name] || '-'}</span>
+                   )}
+                 </div>
+               ))}
+               
+               {/* שדות מותאמים בסעיף בסיסי */}
+               {customFields.filter(f => f.section === 'basic').map(field => (
+                 <div key={field.id} className="flex items-center gap-2">
+                   <span className="text-gray-600 text-sm">{field.display_name}:</span>
+                   {renderCustomField(field, formData, editMode, handleCustomFieldChange)}
+                 </div>
+               ))}
+               
+               {/* כתובת מפורטת */}
+               {globalBuiltInFields.some(f => f.section === 'address' && f.is_active) && (
+                 <div className="space-y-2">
+                   <div className="flex items-center gap-2">
+                     <MapPin size={16} className="text-gray-400" />
+                     <span className="font-medium">כתובת:</span>
+                   </div>
+                   {editMode ? (
+                     <div className="mr-6 space-y-2">
+                       <div className="flex gap-2">
+                         {globalBuiltInFields.find(f => f.field_name === 'street' && f.is_active) && (
+                           <input
+                             type="text"
+                             value={formData.street || ''}
+                             onChange={(e) => setFormData({...formData, street: e.target.value})}
+                             className="border rounded px-2 py-1 flex-1"
+                             placeholder="רחוב"
+                           />
+                         )}
+                         {globalBuiltInFields.find(f => f.field_name === 'house_number' && f.is_active) && (
+                           <input
+                             type="text"
+                             value={formData.house_number || ''}
+                             onChange={(e) => setFormData({...formData, house_number: e.target.value})}
+                             className="border rounded px-2 py-1 w-20"
+                             placeholder="מספר"
+                           />
+                         )}
+                       </div>
+                       <div className="flex gap-2">
+                         {globalBuiltInFields.find(f => f.field_name === 'city' && f.is_active) && (
+                           <input
+                             type="text"
+                             value={formData.city || ''}
+                             onChange={(e) => setFormData({...formData, city: e.target.value})}
+                             className="border rounded px-2 py-1 flex-1"
+                             placeholder="עיר"
+                           />
+                         )}
+                         {globalBuiltInFields.find(f => f.field_name === 'zip_code' && f.is_active) && (
+                           <input
+                             type="text"
+                             value={formData.zip_code || ''}
+                             onChange={(e) => setFormData({...formData, zip_code: e.target.value})}
+                             className="border rounded px-2 py-1 w-24"
+                             placeholder="מיקוד"
+                           />
+                         )}
+                       </div>
+                     </div>
+                   ) : (
+                     <div className="mr-6 text-sm">
+                       {formData.street && formData.house_number && globalBuiltInFields.find(f => f.field_name === 'street' && f.is_active) ? 
+                         `${formData.street} ${formData.house_number}, ` : ''}
+                       {formData.city && globalBuiltInFields.find(f => f.field_name === 'city' && f.is_active) ? formData.city : ''}
+                       {formData.zip_code && globalBuiltInFields.find(f => f.field_name === 'zip_code' && f.is_active) ? ` ${formData.zip_code}` : ''}
+                       {!formData.street && !formData.city && '-'}
+                     </div>
+                   )}
+                 </div>
+               )}
+
+               {/* שדות מותאמים בסעיף כתובת */}
+               {customFields.filter(f => f.section === 'address').map(field => (
+                 <div key={field.id} className="flex items-center gap-2">
+                   <span className="text-gray-600 text-sm">{field.display_name}:</span>
+                   {renderCustomField(field, formData, editMode, handleCustomFieldChange)}
+                 </div>
+               ))}
+               
+               {/* פרטים נוספים */}
+               <div className="pt-2 border-t">
+                 <h4 className="font-medium text-gray-700 mb-2">פרטים נוספים</h4>
+                 <div className="space-y-2 text-sm">
+                   {/* פרטים נוספים - מוצגים רק אם פעילים */}
+                   {globalBuiltInFields.filter(f => f.section === 'additional' && f.is_active).map(field => 
+                     renderBuiltInField(field.field_name, field.display_name, 
+                       field.field_name === 'birth_date' ? 'date' : 
+                       field.field_name === 'children_count' ? 'number' : 'text', 
+                       field.field_name === 'id_number' ? User :
+                       field.field_name === 'birth_date' ? Calendar :
+                       field.field_name === 'occupation' ? Briefcase :
+                       field.field_name === 'spouse_name' ? Home :
+                       field.field_name === 'children_count' ? Baby : null,
+                       formData, editMode, setFormData, globalBuiltInFields)
+                   )}
+
+                   {/* שדות מותאמים בסעיף נוסף */}
+                   {customFields.filter(f => f.section === 'additional').map(field => (
+                     <div key={field.id} className="flex justify-between">
+                       <span className="text-gray-600">{field.display_name}:</span>
+                       {renderCustomField(field, formData, editMode, handleCustomFieldChange)}
+                     </div>
+                   ))}
+                 </div>
+               </div>
+
+               {/* פרטי בנק */}
+               <div className="pt-2 border-t">
+                 <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1">
+                   <CreditCard size={16} /> פרטי בנק
+                 </h4>
+                 <div className="space-y-2 text-sm">
+                   {/* פרטי בנק מובנים - מוצגים רק אם פעילים */}
+                   {globalBuiltInFields.filter(f => f.section === 'bank' && f.is_active).map(field => 
+                     renderBuiltInField(field.field_name, field.display_name, 'text', null, formData, editMode, setFormData, globalBuiltInFields)
+                   )}
+
+                   {/* שדות מותאמים בסעיף בנק */}
+                   {customFields.filter(f => f.section === 'bank').map(field => (
+                     <div key={field.id} className="flex justify-between">
+                       <span className="text-gray-600">{field.display_name}:</span>
+                       {renderCustomField(field, formData, editMode, handleCustomFieldChange)}
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             </div>
+             
+             {/* הערות */}
+             {(formData.notes || editMode) && globalBuiltInFields.find(f => f.field_name === 'notes' && f.is_active) && (
+               <div className="mt-4">
+                 <h4 className="font-semibold text-gray-700 mb-1">הערות</h4>
+                 {editMode ? (
+                   <textarea
+                     value={formData.notes || ''}
+                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                     className="w-full border rounded px-2 py-1"
+                     rows="3"
+                   />
+                 ) : (
+                   <p className="text-sm text-gray-600">{formData.notes}</p>
+                 )}
+               </div>
+             )}
+           </div>
+
+           <div>
+             <h3 className="font-semibold text-gray-700 mb-2">סטטיסטיקות</h3>
+             <div className="space-y-3">
+               <div className="bg-green-50 p-3 rounded">
+                 <p className="text-sm text-gray-600">סה"כ תרומות</p>
+                 <p className="text-xl font-bold text-green-600">₪0</p>
+                 <p className="text-xs text-gray-500">בקרוב...</p>
+               </div>
+               <div className="bg-blue-50 p-3 rounded">
+                 <p className="text-sm text-gray-600">סה"כ מלגות</p>
+                 <p className="text-xl font-bold text-blue-600">₪0</p>
+                 <p className="text-xs text-gray-500">בקרוב...</p>
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     )}
+
+{/* טאב היסטוריית שיחות */}
+{activeTab === 'interactions' && (
+  <div>
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="font-semibold text-lg">היסטוריית שיחות ופעילויות</h3>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setShowAddInteraction(true)}
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-600"
+        >
+          <Plus size={20} />
+          הוסף שיחה
+        </button>
+        {interactions.length > 0 && (
+          <button
+            onClick={deleteAllInteractions}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700"
+            title="מחק את כל השיחות"
+          >
+            <Trash2 size={20} />
+            מחק הכל ({interactions.length})
+          </button>
+        )}
+      </div>
+    </div>
+
+         {/* טופס הוספת שיחה */}
+         {showAddInteraction && (
+           <div className="bg-gray-50 p-4 rounded-lg mb-4">
+             <h4 className="font-semibold mb-3">תיעוד שיחה חדשה</h4>
+             <div className="space-y-3">
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">סוג שיחה</label>
+                 <select
+                   value={newInteraction.interaction_type}
+                   onChange={(e) => setNewInteraction({...newInteraction, interaction_type: e.target.value})}
+                   className="w-full border rounded-lg px-3 py-2"
+                 >
+                   <option value="phone">שיחת טלפון</option>
+                   <option value="meeting">פגישה</option>
+                   <option value="email">אימייל</option>
+                   <option value="message">הודעה</option>
+                 </select>
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">תוכן השיחה</label>
+                 <textarea
+                   value={newInteraction.content}
+                   onChange={(e) => setNewInteraction({...newInteraction, content: e.target.value})}
+                   className="w-full border rounded-lg px-3 py-2"
+                   rows="3"
+                   placeholder="תאר את תוכן השיחה..."
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">מסקנות והחלטות</label>
+                 <textarea
+                   value={newInteraction.conclusions}
+                   onChange={(e) => setNewInteraction({...newInteraction, conclusions: e.target.value})}
+                   className="w-full border rounded-lg px-3 py-2"
+                   rows="2"
+                   placeholder="מה הוחלט? מה הצעדים הבאים?"
+                 />
+               </div>
+               <div className="flex items-center gap-4">
+                 <label className="flex items-center gap-2">
+                   <input
+                     type="checkbox"
+                     checked={newInteraction.follow_up_needed}
+                     onChange={(e) => setNewInteraction({...newInteraction, follow_up_needed: e.target.checked})}
+                     className="rounded"
+                   />
+                   <span>נדרש מעקב</span>
+                 </label>
+                 <select
+                   value={newInteraction.status}
+                   onChange={(e) => setNewInteraction({...newInteraction, status: e.target.value})}
+                   className="border rounded-lg px-3 py-2"
+                 >
+                   <option value="completed">הושלם</option>
+                   <option value="pending">ממתין</option>
+                   <option value="urgent">דחוף</option>
+                 </select>
+               </div>
+               <div className="flex gap-2 justify-end">
+                 <button
+                   onClick={() => setShowAddInteraction(false)}
+                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                 >
+                   ביטול
+                 </button>
+                 <button
+                   onClick={handleAddInteraction}
+                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                 >
+                   שמור שיחה
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
+{/* רשימת שיחות */}
+<div className="space-y-3">
+  {interactions.length === 0 ? (
+    <p className="text-gray-500 text-center py-8">אין שיחות מתועדות עדיין</p>
+  ) : (
+    interactions.map(interaction => (
+      <div key={interaction.id} className="border rounded-lg p-4 hover:bg-gray-50">
+        {editingInteraction?.id === interaction.id ? (
+          // מצב עריכה
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">סוג שיחה</label>
+              <select
+                value={editingInteraction.interaction_type}
+                onChange={(e) => setEditingInteraction({...editingInteraction, interaction_type: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="phone">שיחת טלפון</option>
+                <option value="meeting">פגישה</option>
+                <option value="email">אימייל</option>
+                <option value="message">הודעה</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">תוכן השיחה</label>
+              <textarea
+                value={editingInteraction.content}
+                onChange={(e) => setEditingInteraction({...editingInteraction, content: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+                rows="3"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">מסקנות והחלטות</label>
+              <textarea
+                value={editingInteraction.conclusions}
+                onChange={(e) => setEditingInteraction({...editingInteraction, conclusions: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+                rows="2"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={editingInteraction.follow_up_needed}
+                  onChange={(e) => setEditingInteraction({...editingInteraction, follow_up_needed: e.target.checked})}
+                  className="rounded"
+                />
+                <span>נדרש מעקב</span>
+              </label>
+              <select
+                value={editingInteraction.status}
+                onChange={(e) => setEditingInteraction({...editingInteraction, status: e.target.value})}
+                className="border rounded-lg px-3 py-2"
+              >
+                <option value="completed">הושלם</option>
+                <option value="pending">ממתין</option>
+                <option value="urgent">דחוף</option>
+              </select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setEditingInteraction(null)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={handleUpdateInteraction}
+                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+              >
+                עדכן שיחה
+              </button>
+            </div>
+          </div>
+        ) : (
+          // מצב תצוגה
+          <>
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-2">
+                {interaction.interaction_type === 'phone' && <Phone size={16} className="text-blue-500" />}
+                {interaction.interaction_type === 'meeting' && <Users size={16} className="text-green-500" />}
+                {interaction.interaction_type === 'email' && <Mail size={16} className="text-purple-500" />}
+                {interaction.interaction_type === 'message' && <MessageSquare size={16} className="text-gray-500" />}
+                <span className="font-medium">
+                  {interaction.interaction_type === 'phone' && 'שיחת טלפון'}
+                  {interaction.interaction_type === 'meeting' && 'פגישה'}
+                  {interaction.interaction_type === 'email' && 'אימייל'}
+                  {interaction.interaction_type === 'message' && 'הודעה'}
+                </span>
+                <span className="text-sm text-gray-500">
+                  {new Date(interaction.interaction_date).toLocaleDateString('he-IL')} 
+                  {' '}
+                  {new Date(interaction.interaction_date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {interaction.follow_up_needed && (
+                  <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">נדרש מעקב</span>
+                )}
+                <span className={`text-xs px-2 py-1 rounded ${
+                  interaction.status === 'completed' ? 'bg-green-100 text-green-800' :
+                  interaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {interaction.status === 'completed' && 'הושלם'}
+                  {interaction.status === 'pending' && 'ממתין'}
+                  {interaction.status === 'urgent' && 'דחוף'}
+                </span>
+                <button
+                  onClick={() => startContinueInteraction(interaction)}
+                  className="text-blue-500 hover:text-blue-700 p-1"
+                  title="המשך שיחה"
+                >
+                  <MessageSquare size={16} />
+                </button>
+                <button
+                  onClick={() => setEditingInteraction(interaction)}
+                  className="text-blue-500 hover:text-blue-700 p-1"
+                  title="ערוך שיחה"
+                >
+                  <Edit size={16} />
+                </button>
+                <button
+                  onClick={() => deleteInteraction(interaction.id)}
+                  className="text-red-500 hover:text-red-700 p-1"
+                  title="מחק שיחה"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+            {interaction.parent_interaction_id && (
+              <div className="bg-blue-50 px-3 py-1 rounded text-sm text-blue-700 mb-2">
+                המשך לשיחה קודמת
+              </div>
+            )}
+            {interaction.content && (
+              <div className="mb-2">
+                <p className="text-sm text-gray-600">{interaction.content}</p>
+              </div>
+            )}
+            {interaction.conclusions && (
+              <div className="bg-blue-50 p-2 rounded">
+                <p className="text-sm font-medium text-blue-900">מסקנות:</p>
+                <p className="text-sm text-blue-800">{interaction.conclusions}</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    ))
+ )}
+</div>
+</div>
+
+    {activeTab === 'reminders' && (
+  <div>
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="font-semibold text-lg">תזכורות</h3>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setShowAddReminder(true)}
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-600"
+        >
+          <Plus size={20} />
+          הוסף תזכורת
+        </button>
+        {reminders.length > 0 && (
+          <button
+            onClick={deleteAllReminders}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-700"
+            title="מחק את כל התזכורות"
+          >
+            <Trash2 size={20} />
+            מחק הכל ({reminders.length})
+          </button>
+        )}
+      </div>
+    </div>
+
+         {/* טופס הוספת תזכורת */}
+
+         {showAddReminder && (
+           <div className="bg-gray-50 p-4 rounded-lg mb-4">
+             <h4 className="font-semibold mb-3">תזכורת חדשה</h4>
+             <div className="space-y-3">
+               <div className="grid grid-cols-2 gap-3">
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">תאריך תזכורת</label>
+                   <input
+                     type="datetime-local"
+                     value={newReminder.reminder_date}
+                     onChange={(e) => setNewReminder({...newReminder, reminder_date: e.target.value})}
+                     className="w-full border rounded-lg px-3 py-2"
+                     required
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-sm font-medium text-gray-700 mb-1">סוג תזכורת</label>
+                   <select
+                     value={newReminder.reminder_type}
+                     onChange={(e) => setNewReminder({...newReminder, reminder_type: e.target.value})}
+                     className="w-full border rounded-lg px-3 py-2"
+                   >
+                     <option value="follow_up">מעקב</option>
+                     <option value="birthday">יום הולדת</option>
+                     <option value="holiday">חג</option>
+                     <option value="donation">תרומה</option>
+                     <option value="custom">אחר</option>
+                   </select>
+                 </div>
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">כותרת</label>
+                 <input
+                   type="text"
+                   value={newReminder.title}
+                   onChange={(e) => setNewReminder({...newReminder, title: e.target.value})}
+                   className="w-full border rounded-lg px-3 py-2"
+                   placeholder="על מה להזכיר?"
+                   required
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
+                 <textarea
+                   value={newReminder.description}
+                   onChange={(e) => setNewReminder({...newReminder, description: e.target.value})}
+                   className="w-full border rounded-lg px-3 py-2"
+                   rows="2"
+                   placeholder="פרטים נוספים..."
+                 />
+               </div>
+               <div className="flex gap-2 justify-end">
+                 <button
+                   onClick={() => setShowAddReminder(false)}
+                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                 >
+                   ביטול
+                 </button>
+                 <button
+                   onClick={handleAddReminder}
+                   className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                 >
+                   שמור תזכורת
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
+
+{/* רשימת תזכורות */}
+<div className="space-y-3">
+  {reminders.length === 0 ? (
+    <p className="text-gray-500 text-center py-8">אין תזכורות</p>
+  ) : (
+    reminders.map(reminder => {
+      const isOverdue = new Date(reminder.reminder_date) < new Date() && !reminder.is_completed;
+      return (
+        <div key={reminder.id} className={`border rounded-lg p-4 ${
+          reminder.is_completed ? 'bg-gray-50 opacity-60' : 
+          isOverdue ? 'bg-red-50 border-red-300' : 
+          'hover:bg-gray-50'
+        }`}>
+          {editingReminder?.id === reminder.id ? (
+            // מצב עריכה
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">תאריך תזכורת</label>
+                  <input
+                    type="datetime-local"
+                    value={editingReminder.reminder_date}
+                    onChange={(e) => setEditingReminder({...editingReminder, reminder_date: e.target.value})}
+                    className="w-full border rounded-lg px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">סוג תזכורת</label>
+                  <select
+                    value={editingReminder.reminder_type}
+                    onChange={(e) => setEditingReminder({...editingReminder, reminder_type: e.target.value})}
+                    className="w-full border rounded-lg px-3 py-2"
+                  >
+                    <option value="follow_up">מעקב</option>
+                    <option value="birthday">יום הולדת</option>
+                    <option value="holiday">חג</option>
+                    <option value="donation">תרומה</option>
+                    <option value="custom">אחר</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">כותרת</label>
+                <input
+                  type="text"
+                  value={editingReminder.title}
+                  onChange={(e) => setEditingReminder({...editingReminder, title: e.target.value})}
+                  className="w-full border rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
+                <textarea
+                  value={editingReminder.description || ''}
+                  onChange={(e) => setEditingReminder({...editingReminder, description: e.target.value})}
+                  className="w-full border rounded-lg px-3 py-2"
+                  rows="2"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setEditingReminder(null)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={handleUpdateReminder}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                >
+                  עדכן תזכורת
+                </button>
+              </div>
+            </div>
+          ) : (
+            // מצב תצוגה
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <input
+                    type="checkbox"
+                    checked={reminder.is_completed}
+                    onChange={() => toggleReminderComplete(reminder.id, reminder.is_completed)}
+                    className="rounded"
+                  />
+                  <h4 className={`font-medium ${reminder.is_completed ? 'line-through text-gray-500' : ''}`}>
+                    {reminder.title}
+                  </h4>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    reminder.reminder_type === 'follow_up' ? 'bg-blue-100 text-blue-800' :
+                    reminder.reminder_type === 'birthday' ? 'bg-pink-100 text-pink-800' :
+                    reminder.reminder_type === 'holiday' ? 'bg-purple-100 text-purple-800' :
+                    reminder.reminder_type === 'donation' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {reminder.reminder_type === 'follow_up' && 'מעקב'}
+                    {reminder.reminder_type === 'birthday' && 'יום הולדת'}
+                    {reminder.reminder_type === 'holiday' && 'חג'}
+                    {reminder.reminder_type === 'donation' && 'תרומה'}
+                    {reminder.reminder_type === 'custom' && 'אחר'}
+                  </span>
+                  {isOverdue && (
+                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                      באיחור
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                  <Clock size={14} />
+                  <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                    {new Date(reminder.reminder_date).toLocaleDateString('he-IL')}
+                  </span>
+                  <span>{new Date(reminder.reminder_date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                {reminder.description && (
+                  <p className="text-sm text-gray-600">{reminder.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditingReminder(reminder)}
+                  className="text-blue-500 hover:text-blue-700 p-1"
+                  title="ערוך תזכורת"
+                >
+				<Edit size={16} />
+                </button>
+                <button
+                  onClick={() => deleteReminder(reminder.id)}
+                  className="text-red-500 hover:text-red-700 p-1"
+                  title="מחק תזכורת"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })
+  )}
+</div>
+</div>
+)}
+</div>
+  );
+};
+
+const AddContactForm = () => {
+   const [formData, setFormData] = useState({
+     first_name: '',
+     last_name: '',
+     phone: '',
+     email: '',
+     city: '',
+     street: '',
+     house_number: '',
+     zip_code: '',
+     id_number: '',
+     birth_date: '',
+     occupation: '',
+     spouse_name: '',
+     children_count: 0,
+     bank_name: '',
+     bank_branch: '',
+     bank_account: '',
+     contact_type: 'contact',
+     status: 'active',
+     notes: '',
+     custom_fields: {}
+   });
+   
+   const [activeSection, setActiveSection] = useState('basic');
+   const [customFields, setCustomFields] = useState([]);
+
+   useEffect(() => {
+     if (showAddForm) {
+       fetchCustomFields();
+     }
+   }, [showAddForm]);
+
+   const fetchCustomFields = async () => {
+     try {
+       const { data, error } = await supabase
+         .from('custom_fields')
+         .select('*')
+         .eq('is_active', true)
+         .order('display_order');
+
+       if (error) throw error;
+       setCustomFields(data || []);
+     } catch (error) {
+       console.error('Error fetching custom fields:', error);
+     }
+   };
+
+   const handleSubmit = async (e) => {
+     e.preventDefault();
+     
+     // ניקוי נתונים - הסרת שדות ריקים כדי למנוע שגיאות validation
+     const cleanedData = { ...formData };
+     
+     // הסרת שדות ריקים או undefined
+     Object.keys(cleanedData).forEach(key => {
+       if (cleanedData[key] === '' || cleanedData[key] === undefined || cleanedData[key] === null) {
+         delete cleanedData[key];
+       }
+     });
+     
+     // וידוא שיש לפחות שם פרטי ושם משפחה
+     if (!cleanedData.first_name || !cleanedData.last_name) {
+       alert('נא להזין שם פרטי ושם משפחה');
+       return;
+     }
+     
+     try {
+       const { data, error } = await supabase
+         .from('contacts')
+         .insert([cleanedData])
+         .select();
+
+       if (error) throw error;
+       
+       setContacts([data[0], ...contacts]);
+       setShowAddForm(false);
+       setFormData({
+         first_name: '',
+         last_name: '',
+         phone: '',
+         email: '',
+         city: '',
+         street: '',
+         house_number: '',
+         zip_code: '',
+         id_number: '',
+         birth_date: '',
+         occupation: '',
+         spouse_name: '',
+         children_count: 0,
+         bank_name: '',
+         bank_branch: '',
+         bank_account: '',
+         contact_type: 'contact',
+         status: 'active',
+         notes: '',
+         custom_fields: {}
+       });
+       alert('איש קשר נוסף בהצלחה!');
+     } catch (error) {
+       console.error('Error details:', error);
+       alert('שגיאה בהוספה: ' + error.message);
+     }
+   };
+
+   const handleCustomFieldChange = (fieldName, value) => {
+     setFormData({
+       ...formData,
+       custom_fields: {
+         ...formData.custom_fields,
+         [fieldName]: value
+       }
+     });
+   };
+
+   const renderBuiltInFormField = (fieldName, placeholder, type = 'text') => {
+     const fieldSetting = globalBuiltInFields?.find(f => f.field_name === fieldName);
+     if (!fieldSetting || !fieldSetting.is_active) {
+       return null; // לא להציג שדה שמושבת או לא קיים
+     }
+
+     const value = formData[fieldName] || '';
+
+     return (
+       <input
+         key={fieldName}
+         type={type}
+         placeholder={placeholder}
+         value={value}
+         onChange={(e) => setFormData({
+           ...formData, 
+           [fieldName]: type === 'number' ? parseInt(e.target.value) || 0 : e.target.value
+         })}
+         className="border rounded-lg px-3 py-2"
+         min={type === 'number' ? '0' : undefined}
+       />
+     );
+   };
+
+   if (!showAddForm) return null;
+
+   const sections = [
+     { id: 'basic', name: 'פרטים בסיסיים', icon: User },
+     { id: 'address', name: 'כתובת', icon: MapPin },
+     { id: 'additional', name: 'פרטים נוספים', icon: Info },
+     { id: 'bank', name: 'פרטי בנק', icon: CreditCard }
+   ];
+
+   return (
+     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+       <div className="bg-white rounded-lg p-6 w-full max-w-4xl my-8">
+         <h3 className="text-xl font-bold mb-4">הוסף איש קשר חדש</h3>
+         
+         {/* טאבים לסעיפים */}
+         <div className="flex gap-2 mb-6 border-b">
+           {sections.map(section => {
+             const Icon = section.icon;
+             return (
+               <button
+                 key={section.id}
+                 type="button"
+                 onClick={() => setActiveSection(section.id)}
+                 className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+                   activeSection === section.id
+                     ? 'border-blue-500 text-blue-600'
+                     : 'border-transparent text-gray-600 hover:text-gray-800'
+                 }`}
+               >
+                 <Icon size={16} />
+                 {section.name}
+               </button>
+             );
+           })}
+         </div>
+
+         <form onSubmit={handleSubmit} className="space-y-4">
+           {/* פרטים בסיסיים */}
+           {activeSection === 'basic' && (
+             <div className="space-y-4">
+               {/* שדות חובה - תמיד מוצגים */}
+               <div className="grid grid-cols-2 gap-4">
+                 <input
+                   type="text"
+                   placeholder="שם פרטי *"
+                   value={formData.first_name}
+                   onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                   className="border rounded-lg px-3 py-2"
+                   required
+                 />
+                 <input
+                   type="text"
+                   placeholder="שם משפחה *"
+                   value={formData.last_name}
+                   onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                   className="border rounded-lg px-3 py-2"
+                   required
+                 />
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                 <select
+                   value={formData.status}
+                   onChange={(e) => setFormData({...formData, status: e.target.value})}
+                   className="border rounded-lg px-3 py-2"
+                 >
+                   <option value="active">פעיל</option>
+                   <option value="inactive">לא פעיל</option>
+                 </select>
+                 <div></div> {/* מקום ריק */}
+               </div>
+
+               {/* שדות בסיסיים */}
+               <div className="grid grid-cols-2 gap-4">
+                 {renderBuiltInFormField('phone', 'טלפון', 'tel')}
+                 {renderBuiltInFormField('email', 'אימייל', 'email')}
+               </div>
+
+               {/* שדות מותאמים בסעיף זה */}
+               {customFields.filter(f => f.section === 'basic' && f.is_active).map(field => (
+                 <div key={field.id}>
+                   {renderCustomFieldForm(field, formData, handleCustomFieldChange)}
+                 </div>
+               ))}
+             </div>
+           )}
+
+           {/* כתובת */}
+           {activeSection === 'address' && (
+             <div className="space-y-4">
+               {/* שדות כתובת */}
+               <div className="space-y-4">
+                 {/* שורה ראשונה - רחוב ומספר */}
+                 <div className="grid grid-cols-3 gap-2">
+                   {renderBuiltInFormField('street', 'רחוב')}
+                   {renderBuiltInFormField('house_number', 'מספר')}
+                   <input
+                     type="text"
+                     placeholder="דירה"
+                     value={formData.apartment || ''}
+                     onChange={(e) => setFormData({...formData, apartment: e.target.value})}
+                     className="border rounded-lg px-3 py-2"
+                   />
+                 </div>
+                 
+                 {/* שורה שנייה - עיר ומיקוד */}
+                 <div className="grid grid-cols-2 gap-4">
+                   {renderBuiltInFormField('city', 'עיר')}
+                   {renderBuiltInFormField('zip_code', 'מיקוד')}
+                 </div>
+               </div>
+
+               {/* שדות מותאמים בסעיף זה */}
+               {customFields.filter(f => f.section === 'address' && f.is_active).map(field => (
+                 <div key={field.id}>
+                   {renderCustomFieldForm(field, formData, handleCustomFieldChange)}
+                 </div>
+               ))}
+             </div>
+           )}
+
+           {/* פרטים נוספים */}
+           {activeSection === 'additional' && (
+             <div className="space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                 {renderBuiltInFormField('id_number', 'תעודת זהות')}
+                 {renderBuiltInFormField('birth_date', 'תאריך לידה', 'date')}
+               </div>
+               
+               <div className="grid grid-cols-2 gap-4">
+                 {renderBuiltInFormField('occupation', 'מקצוע')}
+                 {renderBuiltInFormField('spouse_name', 'שם בן/בת זוג')}
+               </div>
+               
+               {renderBuiltInFormField('children_count', 'מספר ילדים', 'number')}
+               
+               {globalBuiltInFields.find(f => f.field_name === 'notes' && f.is_active) && (
+                 <textarea
+                   placeholder="הערות"
+                   value={formData.notes || ''}
+                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                   className="w-full border rounded-lg px-3 py-2"
+                   rows="3"
+                 />
+               )}
+
+               {/* שדות מותאמים בסעיף זה */}
+               {customFields.filter(f => f.section === 'additional' && f.is_active).map(field => (
+                 <div key={field.id}>
+                   {renderCustomFieldForm(field, formData, handleCustomFieldChange)}
+                 </div>
+               ))}
+             </div>
+           )}
+
+           {/* פרטי בנק */}
+           {activeSection === 'bank' && (
+             <div className="space-y-4">
+               <div className="grid grid-cols-3 gap-4">
+                 {renderBuiltInFormField('bank_name', 'שם הבנק')}
+                 {renderBuiltInFormField('bank_branch', 'מספר סניף')}
+                 {renderBuiltInFormField('bank_account', 'מספר חשבון')}
+               </div>
+
+               {/* שדות מותאמים בסעיף זה */}
+               {customFields.filter(f => f.section === 'bank' && f.is_active).map(field => (
+                 <div key={field.id}>
+                   {renderCustomFieldForm(field, formData, handleCustomFieldChange)}
+                 </div>
+               ))}
+             </div>
+           )}
+           
+           <div className="flex gap-2 justify-end pt-4 border-t">
+             <button
+               type="button"
+               onClick={() => setShowAddForm(false)}
+               className="px-4 py-2 text-gray-600 hover:text-gray-800"
+             >
+               ביטול
+             </button>
+             <button
+               type="submit"
+               className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+             >
+               שמור איש קשר
+             </button>
+           </div>
+         </form>
+       </div>
+     </div>
+   );
+ };
+
+const Dashboard = () => {
+  const [upcomingReminders, setUpcomingReminders] = useState([]);
+  const [todayInteractions, setTodayInteractions] = useState([]);
+
+  useEffect(() => {
+    fetchUpcomingReminders();
+    fetchTodayInteractions();
+  }, []);
+
+  const fetchUpcomingReminders = async () => {
+    try {
+      // תזכורות לשבוע הקרוב
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      const { data, error } = await supabase
+        .from('reminders')
+        .select('*, contacts(first_name, last_name)')
+        .eq('is_completed', false)
+        .gte('reminder_date', new Date().toISOString())
+        .lte('reminder_date', nextWeek.toISOString())
+        .order('reminder_date', { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+      setUpcomingReminders(data || []);
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+    }
+  };
+
+  const fetchTodayInteractions = async () => {
+    try {
+      // שיחות מהיום
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const { data, error } = await supabase
+        .from('contact_interactions')
+        .select('*, contacts(first_name, last_name)')
+        .gte('interaction_date', today.toISOString())
+        .lt('interaction_date', tomorrow.toISOString())
+        .order('interaction_date', { ascending: false });
+
+      if (error) throw error;
+      setTodayInteractions(data || []);
+    } catch (error) {
+      console.error('Error fetching interactions:', error);
+    }
+  };
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">סה"כ תרומות החודש</p>
+              <p className="text-3xl font-bold text-green-600">₪0</p>
+            </div>
+            <DollarSign className="text-green-600" size={40} />
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">מלגות לחלוקה</p>
+              <p className="text-3xl font-bold text-blue-600">₪0</p>
+            </div>
+            <Users className="text-blue-600" size={40} />
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">אנשי קשר פעילים</p>
+              <p className="text-3xl font-bold text-purple-600">{contacts.filter(c => c.status === 'active').length}</p>
+            </div>
+            <Activity className="text-purple-600" size={40} />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* תזכורות קרובות */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Bell className="text-yellow-500" size={20} />
+              תזכורות קרובות
+            </h3>
+            <span className="text-sm text-gray-500">השבוע</span>
+          </div>
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {upcomingReminders.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">אין תזכורות קרובות</p>
+            ) : (
+              upcomingReminders.map(reminder => (
+                <div key={reminder.id} className="border rounded-lg p-3 hover:bg-gray-50">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">
+                        {reminder.contacts?.first_name} {reminder.contacts?.last_name}
+                      </p>
+                      <p className="text-sm text-gray-600">{reminder.title}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Clock size={12} className="text-gray-400" />
+                        <span className="text-xs text-gray-500">
+                          {new Date(reminder.reminder_date).toLocaleDateString('he-IL')}
+                          {' '}
+                          {new Date(reminder.reminder_date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      reminder.reminder_type === 'follow_up' ? 'bg-blue-100 text-blue-800' :
+                      reminder.reminder_type === 'birthday' ? 'bg-pink-100 text-pink-800' :
+                      reminder.reminder_type === 'holiday' ? 'bg-purple-100 text-purple-800' :
+                      reminder.reminder_type === 'donation' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {reminder.reminder_type === 'follow_up' && 'מעקב'}
+                      {reminder.reminder_type === 'birthday' && 'יום הולדת'}
+                      {reminder.reminder_type === 'holiday' && 'חג'}
+                      {reminder.reminder_type === 'donation' && 'תרומה'}
+                      {reminder.reminder_type === 'custom' && 'אחר'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* פעילות היום */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <MessageSquare className="text-blue-500" size={20} />
+              פעילות היום
+            </h3>
+            <span className="text-sm text-gray-500">{todayInteractions.length} שיחות</span>
+          </div>
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {todayInteractions.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">אין פעילות מתועדת היום</p>
+            ) : (
+              todayInteractions.map(interaction => (
+                <div key={interaction.id} className="border rounded-lg p-3 hover:bg-gray-50">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">
+                        {interaction.contacts?.first_name} {interaction.contacts?.last_name}
+                      </p>
+                      <p className="text-sm text-gray-600 line-clamp-2">{interaction.content}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {interaction.interaction_type === 'phone' && <Phone size={12} className="text-blue-500" />}
+                        {interaction.interaction_type === 'meeting' && <Users size={12} className="text-green-500" />}
+                        {interaction.interaction_type === 'email' && <Mail size={12} className="text-purple-500" />}
+                        {interaction.interaction_type === 'message' && <MessageSquare size={12} className="text-gray-500" />}
+                        <span className="text-xs text-gray-500">
+                          {new Date(interaction.interaction_date).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                    {interaction.follow_up_needed && (
+                      <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">נדרש מעקב</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+ if (loading) return (
+   <div className="min-h-screen flex items-center justify-center">
+     <Loader className="animate-spin" size={40} />
+   </div>
+ );
+
+return (
+   <div className="min-h-screen bg-gray-100" dir="rtl">
+     <nav className="bg-white shadow-sm">
+       <div className="max-w-7xl mx-auto px-4">
+         <div className="flex justify-between items-center h-16">
+           <h1 className="text-xl font-bold">מערכת ניהול קופת צדקה</h1>
+           <div className="flex gap-4">
+             <button
+               onClick={() => setActiveTab('dashboard')}
+               className={`px-4 py-2 rounded-lg ${activeTab === 'dashboard' ? 'bg-blue-500 text-white' : 'text-gray-600'}`}
+             >
+               דשבורד
+             </button>
+             <button
+               onClick={() => setActiveTab('contacts')}
+               className={`px-4 py-2 rounded-lg ${activeTab === 'contacts' ? 'bg-blue-500 text-white' : 'text-gray-600'}`}
+             >
+               אנשי קשר
+             </button>
+             <button
+               onClick={() => setActiveTab('donations')}
+               className={`px-4 py-2 rounded-lg ${activeTab === 'donations' ? 'bg-blue-500 text-white' : 'text-gray-600'}`}
+             >
+               תרומות
+             </button>
+             <button
+               onClick={() => setActiveTab('scholarships')}
+               className={`px-4 py-2 rounded-lg ${activeTab === 'scholarships' ? 'bg-blue-500 text-white' : 'text-gray-600'}`}
+             >
+               מלגות
+             </button>
+           </div>
+         </div>
+       </div>
+     </nav>
+
+     <main className="max-w-7xl mx-auto px-4 py-8">
+       {activeTab === 'dashboard' && <Dashboard />}
+       {activeTab === 'contacts' && (
+         selectedContact ? (
+           <div>
+             <button
+               onClick={() => setSelectedContact(null)}
+               className="mb-4 text-blue-500 hover:text-blue-600"
+             >
+               → חזור לרשימה
+             </button>
+             <ContactDetails />
+           </div>
+         ) : (
+           <ContactsList />
+         )
+       )}
+       {activeTab === 'donations' && (
+         <div className="bg-white rounded-lg shadow p-6">
+           <h2 className="text-xl font-bold mb-4">ניהול תרומות</h2>
+           <p className="text-gray-500">בקרוב...</p>
+         </div>
+       )}
+       {activeTab === 'scholarships' && (
+         <div className="bg-white rounded-lg shadow p-6">
+           <h2 className="text-xl font-bold mb-4">ניהול מלגות</h2>
+           <p className="text-xs text-gray-500">בקרוב...</p>
+         </div>
+       )}
+     </main>
+     
+     <SettingsModal />
+     <AddContactForm />
+   </div>
+);
+}}
+
+export default App;
